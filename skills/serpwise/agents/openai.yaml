@@ -1,0 +1,7 @@
+# Optional Codex metadata (ignored by other agents).
+interface:
+  display_name: "Serpwise"
+  short_description: "SEO audits and fixes based on Google's documentation"
+  default_prompt: "Use $serpwise audit on this URL and give me a prioritized fix list: "
+policy:
+  allow_implicit_invocation: true
