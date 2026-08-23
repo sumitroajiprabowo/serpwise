@@ -1,0 +1,12 @@
+# Lint and format settings for the auditor and the Python tests.
+# The auditor must keep running on Python 3.8, so target that version.
+target-version = "py38"
+line-length = 110
+
+[lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4"]
+# Long message strings are fine; the formatter handles code layout.
+ignore = ["E501"]
+
+[format]
+quote-style = "double"
