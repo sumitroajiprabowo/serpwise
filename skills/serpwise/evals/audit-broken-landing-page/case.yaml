@@ -1,0 +1,11 @@
+schema_version: "1.1"
+name: audit-broken-landing-page
+context:
+  scaffold_script: place-files.sh
+expected_outcome: |
+  audit.md identifies the noindex robots meta as the top blocker, notes that the
+  <img> inside <head> ends the head for Google (so later metadata may be ignored),
+  flags the invalid hreflang code "uk" and relative hreflang URL, the vague "Home"
+  title, missing alt text, the onclick link without href, the CSS background
+  hero image not being indexable, and the JSON-LD comment making it invalid.
+  It treats meta keywords as ignored by Google rather than a fix to make.
