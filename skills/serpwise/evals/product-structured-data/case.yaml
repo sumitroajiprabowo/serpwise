@@ -1,0 +1,9 @@
+schema_version: "1.1"
+name: product-structured-data
+expected_outcome: |
+  product.jsonld.html contains a valid <script type="application/ld+json"> Product
+  (merchant listing) with name, image, offers (Offer, price 89.00, priceCurrency USD,
+  InStock, NewCondition), a strikethrough price modeled with priceSpecification
+  priceType StrikethroughPrice for 119.00, aggregateRating 4.7/128, brand, sku, gtin,
+  shippingDetails with free shipping to US and delivery time, and a return policy
+  with a 30-day finite window and free returns.
