@@ -1,0 +1,44 @@
+{
+  "name": "serpwise",
+  "version": "1.0.0",
+  "description": "SEO for AI coding agents, based on Google's own documentation. Audit pages, fix indexing problems, write structured data, plan migrations and diagnose traffic drops.",
+  "keywords": [
+    "seo",
+    "google-search",
+    "agent-skills",
+    "claude-code",
+    "codex",
+    "antigravity",
+    "copilot",
+    "structured-data",
+    "schema-org",
+    "technical-seo"
+  ],
+  "homepage": "https://github.com/sumitroajiprabowo/serpwise#readme",
+  "bugs": "https://github.com/sumitroajiprabowo/serpwise/issues",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sumitroajiprabowo/serpwise.git"
+  },
+  "license": "MIT",
+  "author": "Sumitro Aji Prabowo (https://github.com/sumitroajiprabowo)",
+  "type": "module",
+  "bin": {
+    "serpwise": "bin/serpwise.mjs"
+  },
+  "files": [
+    "bin/",
+    "skills/serpwise/",
+    "!skills/serpwise/evals/",
+    "!**/__pycache__/",
+    "!**/*.pyc"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test tests/cli.test.mjs && python3 -m unittest discover -s tests",
+    "lint": "uvx ruff check . && uvx ruff format --check . && npx -y @biomejs/biome@2.6.8 check . && shellcheck install.sh skills/serpwise/evals/*/place-files.sh",
+    "format": "uvx ruff format . && npx -y @biomejs/biome@2.6.8 check --write ."
+  }
+}
