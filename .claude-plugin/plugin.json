@@ -1,0 +1,22 @@
+{
+  "name": "serpwise",
+  "version": "1.0.0",
+  "description": "SEO for AI coding agents, based on Google's own documentation. Audit pages, fix indexing problems, write structured data, plan migrations and diagnose traffic drops.",
+  "author": {
+    "name": "Sumitro Aji Prabowo",
+    "url": "https://github.com/sumitroajiprabowo"
+  },
+  "homepage": "https://github.com/sumitroajiprabowo/serpwise",
+  "repository": "https://github.com/sumitroajiprabowo/serpwise",
+  "license": "MIT",
+  "keywords": [
+    "seo",
+    "google-search",
+    "technical-seo",
+    "structured-data",
+    "schema-org",
+    "hreflang",
+    "core-web-vitals",
+    "search-console"
+  ]
+}
