@@ -1,0 +1,31 @@
+name: Google documentation changed
+description: A Google Search Central page we rely on was updated, added or removed.
+title: "[docs] "
+labels: ["google-docs"]
+body:
+  - type: input
+    id: url
+    attributes:
+      label: Google page
+      description: Link to the Search Central page that changed.
+      placeholder: https://developers.google.com/search/docs/...
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: What changed
+      description: Quote or summarize the new guidance. A link to the Search Central changelog entry helps.
+    validations:
+      required: true
+  - type: textarea
+    id: affected
+    attributes:
+      label: What in serpwise is now wrong or missing
+      description: The file and line in skills/serpwise/, or the auditor check, if you know it.
+  - type: checkboxes
+    id: pr
+    attributes:
+      label: Pull request
+      options:
+        - label: I'd like to open the pull request myself.
