@@ -1,0 +1,156 @@
+# Tests, linting, packaging and manifest checks for every push to main and every pull request.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Python (ruff)
+        run: |
+          uvx ruff check .
+          uvx ruff format --check .
+      - name: JavaScript and JSON (Biome)
+        run: npx -y @biomejs/biome@2.6.8 ci .
+      - name: Shell (shellcheck)
+        run: shellcheck install.sh skills/serpwise/evals/*/place-files.sh
+
+  auditor:
+    name: Auditor tests (Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { python: "3.8", os: ubuntu-22.04 }
+          - { python: "3.10", os: ubuntu-latest }
+          - { python: "3.13", os: ubuntu-latest }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Smoke test on eval fixture (offline)
+        run: |
+          python skills/serpwise/scripts/audit_page.py \
+            skills/serpwise/evals/audit-broken-landing-page/files/index.html \
+            --base-url https://example.com/ --offline --json > /tmp/out.json
+          python -c "import json; d=json.load(open('/tmp/out.json')); assert d['findings'], 'no findings'"
+
+  npm-cli:
+    name: npm CLI (Node ${{ matrix.node }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        node: ["18", "20", "22"]
+        include:
+          - { os: windows-latest, node: "22" }
+          - { os: macos-latest, node: "22" }
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: CLI tests
+        run: node --test tests/cli.test.mjs
+      - name: Package contents (no evals, has skill + bin)
+        run: |
+          npm pack --dry-run --json > pack.json
+          node -e '
+            const files = require("./pack.json")[0].files.map(f => f.path);
+            const must = ["bin/serpwise.mjs", "skills/serpwise/SKILL.md", "skills/serpwise/scripts/audit_page.py"];
+            const missing = must.filter(f => !files.includes(f));
+            const leaked = files.filter(f => f.includes("/evals/") || f.includes("__pycache__") || f.endsWith(".pyc"));
+            if (missing.length || leaked.length) { console.error({ missing, leaked }); process.exit(1); }
+            console.log(files.length + " files OK");'
+      - name: npx serpwise from the packed tarball
+        if: runner.os != 'Windows'
+        run: |
+          npm pack
+          home=$(mktemp -d)
+          mkdir "$home/.claude" "$home/.gemini"   # pretend Claude Code and Antigravity are installed
+          HOME="$home" npx -y ./serpwise-*.tgz
+          test -f "$home/.agents/skills/serpwise/SKILL.md"
+          test -f "$home/.claude/skills/serpwise/SKILL.md"
+          test -f "$home/.gemini/config/skills/serpwise/SKILL.md"
+          test ! -e "$home/.agents/skills/serpwise/evals"
+
+  skill-spec:
+    name: Agent Skills spec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: skills-ref validate
+        run: uvx --from "git+https://github.com/agentskills/agentskills#subdirectory=skills-ref" skills-ref validate skills/serpwise
+      - name: SKILL.md size budget (< 500 lines)
+        run: |
+          n=$(wc -l < skills/serpwise/SKILL.md)
+          echo "SKILL.md: $n lines"
+          test "$n" -lt 500
+
+  manifests:
+    name: Manifests and installers
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Versions are in sync
+        run: |
+          python3 - <<'EOF'
+          import json, re
+          skill = open("skills/serpwise/SKILL.md").read()
+          v = re.search(r'^\s*version:\s*"?([^"\n]+)"?', skill, re.M).group(1)
+          files = {
+              "package.json": json.load(open("package.json"))["version"],
+              ".claude-plugin/plugin.json": json.load(open(".claude-plugin/plugin.json"))["version"],
+          }
+          mp = json.load(open(".claude-plugin/marketplace.json"))
+          files[".claude-plugin/marketplace.json (metadata)"] = mp["metadata"]["version"]
+          files[".claude-plugin/marketplace.json (plugin)"] = mp["plugins"][0]["version"]
+          bad = {k: x for k, x in files.items() if x != v}
+          assert not bad, f"SKILL.md metadata.version={v} but {bad}"
+          print("all versions =", v)
+          EOF
+      - name: Claude Code plugin validate
+        run: npx -y @anthropic-ai/claude-code plugin validate .
+      - name: npx skills add (skills.sh CLI) installs the skill
+        env:
+          DO_NOT_TRACK: "1"
+          DISABLE_TELEMETRY: "1"
+        run: |
+          proj=$(mktemp -d)
+          repo="$PWD"
+          cd "$proj"
+          npx -y skills add "$repo" -a claude-code -a codex -a antigravity-cli -y
+          test -f "$proj/.agents/skills/serpwise/SKILL.md"
+          test -f "$proj/.claude/skills/serpwise/SKILL.md"
+      - name: install.sh syntax and dry install
+        run: |
+          bash -n install.sh
+          tmp=$(mktemp -d)
+          ./install.sh --project "$tmp"
+          test -f "$tmp/.claude/skills/serpwise/SKILL.md"
+          test -f "$tmp/.agents/skills/serpwise/SKILL.md"
