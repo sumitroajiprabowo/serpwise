@@ -1,0 +1,38 @@
+name: Bug report
+description: The skill, the auditor or the installer did something wrong.
+labels: ["bug"]
+body:
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part
+      options:
+        - Skill advice (the agent recommended something wrong)
+        - Auditor (npx serpwise audit / audit_page.py)
+        - Installer (npx serpwise, install.sh)
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what you expected
+      description: For wrong advice, say which Google rule it contradicts and link the page.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: The command or prompt you ran, and the URL or HTML involved. Paste auditor output as text.
+      render: text
+  - type: input
+    id: agent
+    attributes:
+      label: Agent and version
+      placeholder: Claude Code 2.1, Codex 0.169, Antigravity 1.5, Copilot CLI 1.0...
+  - type: input
+    id: version
+    attributes:
+      label: serpwise version
+      description: Output of `npx serpwise --version`.
