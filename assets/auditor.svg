@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="370" viewBox="0 0 900 370" role="img" aria-label="npx serpwise audit output: two Critical findings (a noindex tag and an &lt;img&gt; that ends the head early), followed by High, Medium and Low findings.">
+<style>text{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,'Liberation Mono',monospace;font-size:14px;white-space:pre}@keyframes k1{0%,0.0%{opacity:0}2.083%,97.083%{opacity:1}100.0%,100%{opacity:0}}@keyframes k2{0%,3.333%{width:0;animation-timing-function:steps(72,end)}30.333%,100%{width:611.0px}}@keyframes k3{0%,35.333%{opacity:0}37.0%,100%{opacity:1}}@keyframes k4{0%,37.167%{opacity:0}38.833%,100%{opacity:1}}@keyframes k5{0%,39.0%{opacity:0}40.667%,100%{opacity:1}}@keyframes k6{0%,40.833%{opacity:0}42.5%,100%{opacity:1}}@keyframes k7{0%,42.667%{opacity:0}44.333%,100%{opacity:1}}@keyframes k8{0%,44.5%{opacity:0}46.167%,100%{opacity:1}}@keyframes k9{0%,46.333%{opacity:0}48.0%,100%{opacity:1}}@keyframes k10{0%,48.167%{opacity:0}49.833%,100%{opacity:1}}@keyframes k11{0%,50.0%{opacity:0}51.667%,100%{opacity:1}}@keyframes k12{0%,51.833%{opacity:0}53.5%,100%{opacity:1}}</style>
+<rect width="900" height="370" rx="12" fill="#0d1117"/>
+<rect x="0.5" y="0.5" width="899" height="369" rx="12" fill="none" stroke="#30363d"/>
+<path d="M0 12a12 12 0 0 1 12-12h876a12 12 0 0 1 12 12v26H0z" fill="#161b22"/>
+<circle cx="22" cy="19" r="6" fill="#ff5f57"/><circle cx="42" cy="19" r="6" fill="#febc2e"/><circle cx="62" cy="19" r="6" fill="#28c840"/>
+<g style="opacity:0;animation:k1 12.0s linear infinite">
+<text x="450" y="24" fill="#7d8590" font-size="13" text-anchor="middle" style="">npx serpwise audit</text>
+<clipPath id="c2"><rect x="24" y="55" height="20" width="0" style="animation:k2 12.0s linear infinite"/></clipPath>
+<text x="24" y="70" fill="#e6edf3" clip-path="url(#c2)">$ npx serpwise audit index.html --base-url https://www.stridesupply.com/</text>
+<text x="24" y="108.4" fill="#ff7b72" font-size="14" text-anchor="start" font-weight="bold" style="opacity:0;animation:k3 12.0s linear infinite">[CRITICAL] (indexing) Robots meta blocks indexing: &#x27;noindex, follow&#x27;</text>
+<text x="24" y="132.4" fill="#ff7b72" font-size="14" text-anchor="start" font-weight="bold" style="opacity:0;animation:k4 12.0s linear infinite">[CRITICAL] (html) &lt;img&gt; inside &lt;head&gt; ends the head: 6 meta/link tags ignored</text>
+<text x="24" y="156.4" fill="#ffa657" font-size="14" text-anchor="start" style="opacity:0;animation:k5 12.0s linear infinite">[HIGH] (appearance) Title too vague: &#x27;Home&#x27;</text>
+<text x="24" y="180.39999999999998" fill="#ffa657" font-size="14" text-anchor="start" style="opacity:0;animation:k6 12.0s linear infinite">[HIGH] (mobile) No viewport meta</text>
+<text x="24" y="204.39999999999998" fill="#ffa657" font-size="14" text-anchor="start" style="opacity:0;animation:k7 12.0s linear infinite">[HIGH] (international) Suspicious hreflang codes: [&#x27;uk&#x27;]  (GB, not UK)</text>
+<text x="24" y="228.39999999999998" fill="#ffa657" font-size="14" text-anchor="start" style="opacity:0;animation:k8 12.0s linear infinite">[HIGH] (links) 1 link(s) navigate via JS without a real href</text>
+<text x="24" y="252.39999999999998" fill="#ffa657" font-size="14" text-anchor="start" style="opacity:0;animation:k9 12.0s linear infinite">[HIGH] (structured-data) 1 JSON-LD block(s) fail to parse</text>
+<text x="24" y="276.4" fill="#e3b341" font-size="14" text-anchor="start" style="opacity:0;animation:k10 12.0s linear infinite">[MEDIUM] (images) 3/3 images missing alt attribute</text>
+<text x="24" y="300.4" fill="#8b949e" font-size="14" text-anchor="start" style="opacity:0;animation:k11 12.0s linear infinite">[LOW] (myth) meta keywords present (Google ignores it)</text>
+<text x="24" y="324.4" fill="#7d8590" font-size="14" text-anchor="start" style="opacity:0;animation:k12 12.0s linear infinite">... 9 more findings</text>
+</g>
+</svg>
