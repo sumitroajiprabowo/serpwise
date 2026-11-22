@@ -279,7 +279,7 @@ R = required, Rec = recommended.
 - **Course info**: removed Sept 2025.
 - **Dataset**: Dataset Search only.
 - **Package tracking**: closed to new partners.
-- **FAQ and HowTo rich results**: heavily restricted or removed for most sites. Don't promise them. Use QAPage only for real user Q&A.
+- **FAQ and HowTo rich results**: not in Google's current search gallery. Don't promise them. Use QAPage only for real user Q&A.
 - **Sitelinks search box**: retired.
 
 ## 5. Starter JSON-LD templates
