@@ -1,0 +1,86 @@
+# Publish to npm when a GitHub Release is published.
+#
+# Uses npm trusted publishing (OIDC), so there is no npm token in this repository.
+# One-time setup on npmjs.com: serpwise → Settings → Trusted Publisher →
+# GitHub Actions, owner sumitroajiprabowo, repository serpwise, workflow release.yml,
+# with direct publish allowed.
+#
+# To release: bump the version in all four manifests, update CHANGELOG.md, push,
+# then create a GitHub Release with the tag v<version>.
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # lets npm verify this workflow instead of a token
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      # Trusted publishing needs npm 11.5.1 or later.
+      - name: Update npm
+        run: npm install -g npm@latest && npm --version
+
+      # The tag must be v<version>, and every manifest must carry that version.
+      - name: Check the tag matches the version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Tag $TAG does not match package.json version $version (expected v$version)"
+            exit 1
+          fi
+          for f in .claude-plugin/plugin.json .claude-plugin/marketplace.json skills/serpwise/SKILL.md; do
+            grep -q "\"$version\"" "$f" || { echo "::error::$f does not carry version $version"; exit 1; }
+          done
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+
+      - name: Run tests
+        run: npm test
+
+      # Re-running the workflow for a version that is already on npm is a no-op.
+      - name: Check whether this version is already published
+        id: exists
+        run: |
+          if npm view "serpwise@$VERSION" version >/dev/null 2>&1; then
+            echo "serpwise@$VERSION is already on npm, skipping publish."
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Pre-releases go to the "next" dist-tag so `npx serpwise` keeps the stable version.
+      - name: Publish
+        if: steps.exists.outputs.published != 'true'
+        env:
+          PRERELEASE: ${{ github.event.release.prerelease }}
+        run: |
+          if [ "$PRERELEASE" = "true" ]; then
+            npm publish --tag next
+          else
+            npm publish
+          fi
+
+      - name: Summary
+        run: |
+          echo "### serpwise@$VERSION" >> "$GITHUB_STEP_SUMMARY"
+          echo "https://www.npmjs.com/package/serpwise/v/$VERSION" >> "$GITHUB_STEP_SUMMARY"
