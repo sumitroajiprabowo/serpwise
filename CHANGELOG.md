@@ -19,6 +19,7 @@ Rechecked every reference file against the current Google Search Central pages: 
 - Identifying Google Search traffic by referrer in analytics and server logs.
 - Social and video platform accounts in Search Console.
 - Google's crawler tokens, the 64MB PDF limit, and the planned AIPREF training signal.
+- A release workflow that publishes to npm with trusted publishing (no npm token) whenever a GitHub Release is published.
 
 ### Changed
 
