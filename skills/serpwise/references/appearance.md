@@ -15,7 +15,7 @@ Source: developers.google.com/search/docs/appearance/*
 10. Page experience & Core Web Vitals
 11. Interstitials
 12. Ranking systems
-13. AI features (AI Overviews / AI Mode)
+13. AI features (AI Overviews / AI Mode) and generative AI search
 14. Other features (business details, preferred sources, search profiles, translated results, top places, flexible sampling, Web Stories, regional features)
 
 ## 1. Anatomy of a result
@@ -196,23 +196,48 @@ Common issues Google rewrites:
 - **Retired** (folded into core): Helpful Content system (March 2024), Panda, Penguin, Hummingbird.
 - Ranking is page-level with some site-wide signals.
 
-## 13. AI features (AI Overviews, AI Mode)
-- **No extra requirements or special optimization.** The page must be indexed and eligible to show a snippet. Ordinary SEO applies.
-- **No llms.txt, special AI files, or new schema are needed.**
-- Recommended:
-  - Allow crawling in robots.txt and at the CDN.
-  - Internal links.
-  - Good page experience.
-  - Important content as text.
-  - Quality images and video.
-  - Structured data that matches visible text.
-  - Keep Merchant Center and Business Profile current.
-- "Query fan-out" means AI features can surface a wider set of pages than classic results.
-- Measurement: counted in the Performance report under "Web".
-- Controls:
-  - `nosnippet`, `data-nosnippet`, `max-snippet`, `noindex`.
-  - The Search Console Search generative AI control.
-  - `Google-Extended` limits use for training and grounding in other Google AI products (not Search).
+## 13. AI features (AI Overviews, AI Mode) and generative AI search
+Sources: /appearance/ai-features and /fundamentals/ai-optimization-guide.
+
+How they work:
+- AI features ground their answers in the regular Search index (retrieval-augmented generation). Optimizing for them is still SEO. "AEO" and "GEO" are other names for the same work.
+- **Query fan-out**: the model runs several related searches at once (e.g. "lawn full of weeds" also searches herbicides, chemical-free removal, prevention), so a wider set of pages can be linked than in classic results.
+- AI Overviews show only when Google judges them useful on top of classic results, so many queries don't trigger one. AI Mode is for complex, multi-step questions.
+
+Eligibility:
+- **No extra requirements or special optimization.** The page must be indexed and eligible to show a snippet. Indexing and display are never guaranteed.
+- The site must be included in "Search generative AI features" in Search Console to be shown in them.
+
+What helps (ordinary SEO):
+- **Non-commodity content**: first-hand experience and a point of view that generic "7 tips" pages don't have. Google ranks this above everything else in the guide.
+- Clear paragraphs, sections and headings, written for people.
+- Images and video that support the text (follow §4 and §5).
+- Crawlable, indexable pages (robots.txt and CDN allow Googlebot), internal links, JavaScript SEO, few duplicates, good page experience with main content clearly separated.
+- Important content as text, and structured data that matches the visible text.
+- Current Merchant Center feeds and Business Profile for products and local businesses.
+- Semantic HTML helps accessibility but isn't required. Don't chase perfect code.
+
+What not to do (Google's own myth list):
+- **llms.txt, AI text files, Markdown copies or special markup**: Google Search doesn't use them. Making them for other services neither helps nor hurts.
+- **Chunking** content into small pieces: not needed. One page can cover several topics, and there is no ideal length.
+- **Rewriting for AI** or chasing every long-tail variant: AI systems understand synonyms and meaning.
+- **One page per fan-out query or query variant**: that is scaled content abuse (spam-policies.md). More pages don't make a site better.
+- **Inauthentic "mentions"** planted around the web: core ranking focuses on content quality, and other systems catch spam.
+- **Over-focusing on structured data**: it isn't required for AI features and there is no special schema for them. It is still worth having for rich results.
+
+Measurement:
+- AI Overviews and AI Mode clicks are counted in the Performance report under the "Web" search type. Google says these clicks tend to be higher quality (more time on site).
+- The Search Console generative AI performance report shows visibility in generative AI features and Discover.
+- Be wary of third-party tools that claim to see Google's AI rankings. None has that access.
+
+Controls:
+- `nosnippet`, `data-nosnippet`, `max-snippet`, `noindex`. Changes can take days to months to apply after recrawl. Check with URL Inspection and request a recrawl.
+- robots.txt for Googlebot is the access control for Search, including AI features.
+- `Google-Extended` limits use for Gemini training and grounding in other Google AI products. It doesn't affect Search inclusion or ranking.
+
+Agents:
+- Browser agents may read screenshots, the DOM and the accessibility tree to complete tasks, so accessible, well-labelled pages help them too.
+- Emerging protocols such as the Universal Commerce Protocol (UCP) and the Business Agent conversational experience are early. Watch Google's announcements instead of building for them speculatively.
 
 ## 14. Other features
 - **Business details**:
