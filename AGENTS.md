@@ -19,7 +19,7 @@ The product is a single Agent Skill in `skills/serpwise/`. Everything else is pa
 | `install.sh` | Installer for machines without Node.js |
 | `examples/` | Unedited audit reports from a with/without-skill comparison, linked from the README |
 | `assets/` | README animations, their generator (`make_demos.py`) and the GitHub social preview image. Not shipped to npm |
-| `.github/` | CI, issue templates and the pull request template |
+| `.github/` | CI, the npm release workflow, issue templates and the pull request template |
 
 ## Rules for the skill
 
@@ -102,5 +102,9 @@ The version number appears in four places, and CI fails if they don't match:
 To release:
 
 1. Update all four version numbers and add a `CHANGELOG.md` entry.
-2. Run `npm test`, commit, then tag the release: `git tag v<version>`.
-3. Push the commit and the tag, publish with `npm publish`, and create a GitHub release from the tag.
+2. Run `npm test`, commit and push.
+3. Create a GitHub release with the tag `v<version>`, for example `gh release create v1.2.0 --generate-notes`.
+
+Publishing the release starts `.github/workflows/release.yml`. It checks that the tag matches all four version numbers, runs the tests and publishes to npm. A pre-release goes to the `next` dist-tag.
+
+The workflow uses npm trusted publishing (OIDC), so the repository holds no npm token. The trusted publisher is set up once on npmjs.com under the package's Settings: GitHub Actions, `sumitroajiprabowo/serpwise`, workflow `release.yml`, with direct publish allowed.
