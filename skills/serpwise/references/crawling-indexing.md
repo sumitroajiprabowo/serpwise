@@ -27,9 +27,12 @@ Source: developers.google.com/search/docs/crawling-indexing/* and developers.goo
   - **Common crawlers** (Googlebot) always obey robots.txt.
   - **Special-case crawlers** (AdsBot) may ignore `*` rules.
   - **User-triggered fetchers** (Site Verifier, etc.) ignore robots.txt.
+- Tokens worth knowing: `Googlebot` (Search, Discover; smartphone and desktop share it), `Googlebot-Image` (images, logos, favicons), `Googlebot-Video`, `Googlebot-News`, `Storebot-Google` (Shopping), `Google-InspectionTool` (testing tools, no Search effect), `GoogleOther` (no product effect).
+- `Google-Extended` is a robots.txt token only. It controls Gemini training and grounding outside Search and has no effect on Search inclusion or ranking. Google has said it plans to support the shared AIPREF training signal (`user-agent: __usage_ai-training`) in early 2027.
+- Verify Googlebot with reverse DNS or Google's published IP ranges, not the user-agent string alone.
 - Crawling comes mostly from US IPs. Google may also crawl from other countries.
 - Protocols: HTTP/1.1 and HTTP/2. Opt out of HTTP/2 by responding `421`. Encodings supported: gzip, deflate, br.
-- **Size**: the first 15MB of a file is fetched by default. Googlebot for Search uses the **first 2MB** of HTML or supported text files, and uncompressed size counts. Keep critical content and links early.
+- **Size**: Google's crawlers fetch the first 15MB of a file by default, but Googlebot for Search fetches only the **first 2MB** of HTML and other supported text files (**64MB** for PDFs). Each CSS or JS file is fetched separately under the same 2MB limit. Uncompressed size counts, and anything past the limit is ignored. Keep critical content and links early.
 - Caching: `ETag`/`If-None-Match` is preferred over `Last-Modified`. Set both. `Cache-Control: max-age` is honored.
 - File type comes from `Content-Type`.
   - Indexable documents and text: HTML, PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, ODP/ODS/ODT, RTF, EPUB, HWP, PS, TXT and source code, CSV, KML/KMZ, GPX, SVG, TeX, WML, XML.
