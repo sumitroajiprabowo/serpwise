@@ -22,6 +22,7 @@
    - bylines and author pages, with no fabricated authors;
    - disclosure of AI or automation where readers expect it;
    - helping people as the primary purpose.
+   - if AI wrote any of it: facts checked, and the title, meta description, structured data and alt text reviewed too (`references/fundamentals.md` §4).
 5. **Assess spam risk:** scaled content abuse, doorway pages, keyword stuffing, site reputation abuse.
 6. **Output:**
    - strengths;
