@@ -162,19 +162,19 @@ class PageAuditTests(unittest.TestCase):
     def test_hreflang_codes(self):
         links = '<link rel="alternate" hreflang="{}" href="https://example.com/{}/">'
         head = GOOD_HEAD.replace(
-            "</head>", "".join(links.format(c, c) for c in ("en-uk", "es-419", "id")) + "</head>"
+            "</head>", "".join(links.format(c, c) for c in ("en-uk", "es-419", "de")) + "</head>"
         )
         d = run(page(head=head))
         msg = " ".join(issues(d, "high"))
         self.assertIn("en-uk", msg)
         self.assertIn("es-419", msg)
-        self.assertNotIn("'id'", msg)
+        self.assertNotIn("'de'", msg)
 
     def test_valid_hreflang_not_flagged(self):
         links = '<link rel="alternate" hreflang="{}" href="https://example.com/product/aero-2">'
         head = GOOD_HEAD.replace(
             "</head>",
-            "".join(links.format(c) for c in ("id-ID", "en-GB", "zh-Hant-TW", "x-default")) + "</head>",
+            "".join(links.format(c) for c in ("de-AT", "en-GB", "zh-Hant-TW", "x-default")) + "</head>",
         )
         self.assertFalse(has(run(page(head=head)), "Suspicious hreflang"))
 
