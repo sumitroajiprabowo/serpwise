@@ -4,9 +4,9 @@ description: Google Search SEO playbook based on the official Google Search Cent
 license: MIT
 compatibility: Optional bundled auditor needs Python 3.8+ and network access to fetch the URL being audited. Works with any Agent Skills client (Claude Code, Codex, Copilot, Antigravity, etc.).
 metadata:
-  version: "1.0.0"
+  version: "1.0.1"
   source: "https://developers.google.com/search/docs"
-  docs-snapshot: "2026-11-20"
+  docs-snapshot: "2026-11-22"
 ---
 
 # Serpwise: Google Search SEO for coding agents
@@ -51,11 +51,11 @@ Routing:
 
 | File | Covers |
 |---|---|
-| `references/fundamentals.md` | How Search works, helpful content, E-E-A-T, myths, promotion |
+| `references/fundamentals.md` | How Search works, Search Essentials, helpful content, E-E-A-T, generative AI content, myths, promotion, hiring an SEO |
 | `references/crawling-indexing.md` | robots.txt, sitemaps, canonical, noindex, redirects, status codes, JS SEO, crawl budget, URL structure, mobile-first, site moves, removals |
-| `references/appearance.md` | Titles, snippets, images, video, favicon, site name, Discover, Core Web Vitals, ranking systems, AI features |
+| `references/appearance.md` | Titles, snippets, images, video, favicon, site name, Discover, Core Web Vitals, ranking systems, AI features and generative AI search (AEO/GEO) |
 | `references/structured-data.md` | General policies, required/recommended properties per type, JSON-LD templates |
-| `references/monitoring-debugging.md` | Traffic-drop tree, Search Console workflow, debugging tools, GA vs GSC, Trends, UGC spam |
+| `references/monitoring-debugging.md` | Traffic-drop tree, Search Console workflow, debugging tools, GA vs GSC, Google traffic in logs, social and video accounts, Trends, UGC spam |
 | `references/ecommerce.md` | Product data, Merchant Center, variants, pagination, faceted navigation, launch |
 | `references/international.md` | hreflang, locale URL structures, locale-adaptive pages |
 | `references/explicit-content.md` | SafeSearch and misclassification |
@@ -127,6 +127,7 @@ Google says these don't matter. If the user asks about one, explain kindly with 
 - Sitemap `<priority>` and `<changefreq>` (ignored).
 - `crawl-delay` or `noindex` in robots.txt (unsupported).
 - llms.txt or special "AI files" to appear in AI Overviews (not needed).
+- "Chunking" content, rewriting it for AI, or one page per query variant for AI search (not needed; the last is scaled content abuse).
 - Geo meta tags (ignored).
 - The `lang` attribute for language detection (Google reads the visible content instead).
 
