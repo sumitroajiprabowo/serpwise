@@ -16,6 +16,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          enable-cache: false  # no Python lockfile to key a cache on
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -101,6 +103,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          enable-cache: false  # no Python lockfile to key a cache on
       - name: skills-ref validate
         run: uvx --from "git+https://github.com/agentskills/agentskills#subdirectory=skills-ref" skills-ref validate skills/serpwise
       - name: SKILL.md size budget (< 500 lines)
