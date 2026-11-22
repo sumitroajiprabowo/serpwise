@@ -30,10 +30,10 @@ Source: developers.google.com/search/docs/specialty/international/*
 ## 3. Locale URL structures
 | Structure | Example | Pros | Cons |
 |---|---|---|---|
-| ccTLD | `example.co.id`, `example.de` | Strongest geo signal, server location irrelevant, easy separation | Costly, availability limits, more infrastructure, some ccTLDs have strict requirements, one country each |
+| ccTLD | `example.de`, `example.fr` | Strongest geo signal, server location irrelevant, easy separation | Costly, availability limits, more infrastructure, some ccTLDs have strict requirements, one country each |
 | Subdomain on gTLD | `id.example.com` | Easy, can host in different locations, easy separation | "id" is ambiguous (language or country?) |
 | Subdirectory on gTLD | `example.com/de/` | Easy, low maintenance, one host | Weaker geo signal, single server location, harder to separate |
-| URL parameter | `example.com?loc=id` | none | **Not recommended** |
+| URL parameter | `example.com?loc=de` | none | **Not recommended** |
 
 Geotargeting a single country and language can boost that market at the expense of others. It is never exact, so always show region and language links.
 
@@ -92,7 +92,7 @@ Link: <https://example.com/file.pdf>; rel="alternate"; hreflang="en",
 ```
 
 ## 6. Language/region codes & x-default
-- Format: language **ISO 639-1**, optionally followed by region **ISO 3166-1 alpha-2**: `id`, `id-ID`, `en-US`. Case-insensitive.
+- Format: language **ISO 639-1**, optionally followed by region **ISO 3166-1 alpha-2**: `de`, `de-AT`, `en-US`. Case-insensitive.
 - **The first code is always the language.** A country alone is invalid. `be` means Belarusian, so for Belgium use `nl-BE`, `fr-BE`, or `de-BE`.
 - Scripts use ISO 15924: `zh-Hans`, `zh-Hant`, `zh-Hant-TW`.
 - Invalid or ignored: `es-419`, `EU`, `UN`, `UK` (use `GB`), and reserved codes.

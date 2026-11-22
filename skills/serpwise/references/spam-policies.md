@@ -7,7 +7,7 @@ Violations lead to lower rankings or removal. Detection is automated (SpamBrain)
 | Policy | What it is | Legit alternative |
 |---|---|---|
 | **Cloaking** | Different content for Googlebot vs users | Serve the same content. Paywalls are OK with paywalled markup and flexible sampling |
-| **Doorway abuse** | Many near-identical pages or domains funneling to one destination (e.g. "jasa SEO [kota]" × 500 cities) | Real location pages with unique local info, or one strong page |
+| **Doorway abuse** | Many near-identical pages or domains funneling to one destination (e.g. "plumber in [city]" × 500 cities) | Real location pages with unique local info, or one strong page |
 | **Expired domain abuse** | Buying an expired domain for its reputation and hosting unrelated low-value content | Build your own brand. Redirect only genuinely related acquired domains |
 | **Hacked content** | Injected code, pages, or links, malicious redirects | Security hygiene. Monitor the Security Issues report |
 | **Hidden text & links** | White-on-white text, off-screen CSS, 0px font, text behind images | Visible content. Accordions, tabs, tooltips, and screen-reader text are fine |
