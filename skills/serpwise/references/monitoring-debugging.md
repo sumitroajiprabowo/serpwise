@@ -12,6 +12,8 @@ Source: developers.google.com/search/docs/monitor-debug/* and /guides/debug
 7. Search operators
 8. Preventing user-generated spam
 9. JavaScript problem checklist
+10. Identifying Google Search traffic in analytics and server logs
+11. Social and video platform accounts in Search Console
 
 ## 1. Search Console workflow
 1. Verify ownership of every variant you care about: a Domain property, or URL-prefix properties for http/https and www/non-www.
@@ -85,16 +87,19 @@ Check in this order:
   - Attribution models.
   - Canonical URL aggregation in GSC.
   - Search types (Discover, News).
-  - Non-HTML files like PDFs aren't measured in GA.
-  - Bot filtering.
+  - Non-HTML files like PDFs count in GSC but aren't measured in GA unless you track them (e.g. enhanced measurement events).
+  - Bot filtering: GA drops known bots, GSC doesn't necessarily.
+- Small differences are normal. The trends should match even when totals don't.
 - Setup: the Looker Studio template (GSC URL Impression table plus GA4). Use the same country and device filters on both sources.
 - Advanced: GSC bulk export plus GA4 BigQuery export, joined on landing page, country, or device.
 - Interpreting changes:
   - Organic clicks drop: investigate in GSC.
   - Engagement drops: check that the content matches the query intent.
+  - Organic share moves but sessions and engagement don't: another channel changed. Check GA's Traffic acquisition report.
+- Other routes: connect Search Console to GA, or Site Kit on WordPress.
 
 ## 7. Search operators (debugging aid only, results are incomplete)
-- `site:example.com` covers the domain and subdomains. `site:https://example.com/blog/` limits to a prefix. `site:example.com kata` finds pages with that term.
+- `site:example.com` covers the domain and subdomains. `site:https://example.com/blog/` limits to a prefix. `site:example.com widget` finds pages with that term.
 - Use `site:` to spot spam injection (e.g. `site:example.com casino`).
 - `filetype:pdf`, `imagesize:1200x800` (Images), `src:` (Images, pages that reference an image URL).
 - A missing URL in `site:` results doesn't prove it isn't indexed. **URL Inspection is authoritative.**
@@ -123,3 +128,28 @@ Check in this order:
 8. Web components must use `<slot>` for light-DOM content.
 9. JS paywalls: don't send the full text and hide it client-side.
 10. Re-test. Expect days for recrawl.
+
+## 10. Identifying Google Search traffic in analytics and server logs
+- Google Search sends the `origin` referrer policy, so `Referer` has only the scheme and host, never the path or the query. Use the Performance report for queries.
+- Referer values:
+  - Web: `https://www.google.com/` or a local Google domain (`https://www.google.co.uk/`, `https://www.google.co.jp/`).
+  - Google app on Android: `android-app://com.google.android.googlequicksearchbox/https/www.google.com`, or the web values when the link opens in a browser.
+  - Google app on iOS: the web values.
+- Discover and Google Images send the same values as the surface they were seen on, so they can't be separated from web Search by referrer alone.
+- In server logs, count landing-page requests only. Images, CSS and JS requests carry your own page as the referrer.
+- Search traffic showing as direct or referral: check custom channel rules, referral exclusions and filters in the analytics tool.
+- Why logs or analytics undercount compared with Search Console:
+  - blank referrers from private browsing, privacy settings, extensions, ad blockers, some new-tab opens, native search widgets;
+  - consent choices;
+  - client-side redirects (JavaScript or `meta refresh`) or a strict `Referrer-Policy` that replace or strip the referrer, and redirects that drop parameters such as `gclid`;
+  - a GSC click becomes a session only after the page loads and the tag runs;
+  - analytics may include paid clicks, while GSC counts organic only.
+
+## 11. Social and video platform accounts in Search Console
+- TikTok, Instagram, X and YouTube accounts can be added as platform properties in Search Console, one by one. Claiming a Search profile adds verified accounts automatically.
+- Their content shows in Search as short-video carousels, latest-post carousels and "what people are saying".
+- Insights report: 28-day clicks, top content, the queries people used, audience countries, and query groups (top, trending up, trending down).
+- Performance report: filter by country, date, device or query. Use the 24-hour view to catch a new post trending, then cross-promote it.
+- Compare formats with page filters and comparison mode: YouTube `/watch` vs `/shorts/`, Instagram `/p/` vs `/reels/`. A `playlist` filter reports the playlist page only, not its videos.
+- Export each platform property to compare across platforms.
+- Revive older posts that suddenly gain impressions (pin, reference, follow up). Add a Search Console annotation when you change a caption or title, then compare before and after.
