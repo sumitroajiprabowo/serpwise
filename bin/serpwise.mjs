@@ -47,14 +47,15 @@ Usage
   npx serpwise --project [dir]      Install into a project only (default: current dir)
   npx serpwise@latest update        Reinstall the latest version over an existing install
   npx serpwise uninstall [--project [dir]]
-  npx serpwise audit <url|file> [--json] [--base-url URL] [--offline] [--fail-on SEVERITY]
+  npx serpwise audit <url|file|-> [--json|--markdown] [--base-url URL] [--offline] [--fail-on SEVERITY]
+  npx serpwise audit --sitemap URL [--limit N] [--pagespeed] ...
                                     Run the bundled page auditor (needs Python 3.8+)
 
 Options
   --agents claude,agents,antigravity
                                     Choose targets (default: the agents found)
                                       claude      = ~/.claude/skills (Claude Code)
-                                      agents      = ~/.agents/skills (Codex, Copilot, ...)
+                                      agents      = ~/.agents/skills (Codex, Copilot, Cursor, Windsurf, ...)
                                       antigravity = ~/.gemini/config/skills (Antigravity)
                                     In a project, Antigravity reads .agents/skills.
   --dry-run                         Show what would change
@@ -62,7 +63,7 @@ Options
   -v, --version                     Show version
 
 Then, in your agent:
-  /serpwise audit https://example.com    (Claude Code, Copilot)
+  /serpwise audit https://example.com    (Claude Code, Copilot, Cursor, Windsurf)
   $serpwise audit https://example.com    (Codex)
 `;
 
@@ -185,7 +186,7 @@ function install(o) {
   }
   if (!o.dryRun) {
     console.log(`\nserpwise ${VERSION} installed. Restart your agent, then try:`);
-    console.log("  /serpwise audit https://example.com   (Claude Code, Copilot)");
+    console.log("  /serpwise audit https://example.com   (Claude Code, Copilot, Cursor, Windsurf)");
     console.log("  $serpwise audit https://example.com   (Codex)");
     if (o.project)
       console.log("\nTip: commit .agents/ and .claude/skills/ to share serpwise with your team.");

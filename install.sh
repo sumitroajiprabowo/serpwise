@@ -8,7 +8,7 @@
 #
 # Targets:
 #   claude       ~/.claude/skills/serpwise          Claude Code
-#   agents       ~/.agents/skills/serpwise          Codex, GitHub Copilot and other Agent Skills clients
+#   agents       ~/.agents/skills/serpwise          Codex, Copilot, Cursor, Windsurf and other clients
 #   antigravity  ~/.gemini/config/skills/serpwise   Antigravity
 # In a project, Antigravity reads DIR/.agents/skills, so --project writes
 # DIR/.claude/skills and DIR/.agents/skills only.
