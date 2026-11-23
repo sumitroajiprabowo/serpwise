@@ -145,6 +145,7 @@ We gave each agent the same task: audit a landing page with eight planted proble
 - `skills/serpwise/commands/`: one playbook per command.
 - `skills/serpwise/references/`: condensed Google Search Central guidance that the agent reads when a task needs it.
 - `skills/serpwise/scripts/audit_page.py`: the page auditor.
+- `skills/serpwise/scripts/analyze_gsc.py`: Search Console Compare export analyzer.
 - `bin/serpwise.mjs`: the `npx serpwise` installer.
 
 ## Contributing
