@@ -4,6 +4,25 @@ All notable changes to this project are documented here. The format follows [Kee
 
 Each release also records `docs-snapshot`, the date the reference material was last checked against Google Search Central.
 
+## [1.1.0] - 2026-11-24
+
+docs-snapshot: 2026-11-22
+
+### Added
+
+- The auditor can audit every URL in a sitemap (`--sitemap`, `--limit`, default 20) or a list of URLs on stdin (`-`). Sitemap indexes and gzipped sitemaps are followed, and image or video `<loc>` entries aren't treated as pages.
+- `--markdown` output for pull request comments and issues.
+- Missing required properties are reported for Product, LocalBusiness, Event, JobPosting and BreadcrumbList markup (High, since the item can't get its rich result), and missing recommended properties for Article (Medium).
+- `--pagespeed` reports Core Web Vitals (LCP, INP, CLS) from Chrome UX Report field data at the 75th percentile, using Google's thresholds. Lab data is shown for context but never raised as a finding. `--pagespeed-key` or `PAGESPEED_API_KEY` supplies an API key, because the keyless quota runs out quickly.
+- `local` command for local business pages and LocalBusiness markup.
+- `scripts/analyze_gsc.py` ranks the queries or pages that lost and gained the most in a Search Console Compare export, for clicks, impressions, CTR or position.
+- `examples/serpwise-ci.yml`, a GitHub Actions workflow that audits a page on pull requests.
+
+### Changed
+
+- The `content` playbook says what Google recommends for AI search features and corrects the "AEO/GEO" myths.
+- The installer help and README say that Cursor and Windsurf read `~/.agents/skills`, which the default install already covers.
+
 ## [1.0.1] - 2026-11-22
 
 docs-snapshot: 2026-11-22
