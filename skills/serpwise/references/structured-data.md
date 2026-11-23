@@ -276,10 +276,12 @@ R = required, Rec = recommended.
 - Name and description must be unique per video.
 
 ## 4. Deprecated or limited types
-- **Course info**: removed Sept 2025.
+- **Stopped showing in Search in 2025 (docs removed Sept 2025)**: Course info, Estimated salary, Learning video, Special announcement, Vehicle listing. Claim Review was announced as phased out in June 2025.
+- **Practice problems**: docs removed Jan 6, 2026.
+- **FAQ**: no longer appears in Google Search from May 7, 2026 (docs removed June 15, 2026). Use QAPage only for real user Q&A.
+- **HowTo**: not in Google's current search gallery. Don't promise it.
 - **Dataset**: Dataset Search only.
 - **Package tracking**: closed to new partners.
-- **FAQ and HowTo rich results**: not in Google's current search gallery. Don't promise them. Use QAPage only for real user Q&A.
 - **Sitelinks search box**: retired.
 
 ## 5. Starter JSON-LD templates

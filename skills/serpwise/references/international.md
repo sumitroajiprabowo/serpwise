@@ -31,7 +31,7 @@ Source: developers.google.com/search/docs/specialty/international/*
 | Structure | Example | Pros | Cons |
 |---|---|---|---|
 | ccTLD | `example.de`, `example.fr` | Strongest geo signal, server location irrelevant, easy separation | Costly, availability limits, more infrastructure, some ccTLDs have strict requirements, one country each |
-| Subdomain on gTLD | `id.example.com` | Easy, can host in different locations, easy separation | "id" is ambiguous (language or country?) |
+| Subdomain on gTLD | `de.example.com` | Easy, can host in different locations, easy separation | "de" is ambiguous (language or country?) |
 | Subdirectory on gTLD | `example.com/de/` | Easy, low maintenance, one host | Weaker geo signal, single server location, harder to separate |
 | URL parameter | `example.com?loc=de` | none | **Not recommended** |
 

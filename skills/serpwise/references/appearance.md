@@ -75,7 +75,7 @@ Common issues Google rewrites:
 
 **Landing page**
 - Preferred image: `primaryImageOfPage`, or `image` on the main entity, or `og:image`. It should be relevant, not a logo, not text-heavy, not an extreme aspect ratio, and high resolution.
-- Descriptive filenames (`kucing-hitam-anggora.jpg`, not `IMG00023.JPG`), localized.
+- Descriptive filenames (`black-kitten.jpg`, not `IMG00023.JPG`), localized.
 - **Alt text is the most important image attribute.** Describe the image in context, without stuffing. Bad → good: missing alt → `alt="puppy"` → `alt="Dalmatian puppy playing fetch"`. Inline SVG uses `<title>`.
 - Place images near relevant text. Reuse the same URL for the same image across pages.
 - Structured data with `image` enables badges in Google Images.
@@ -149,7 +149,7 @@ Common issues Google rewrites:
   - Can't be requested. Answer questions clearly in a well-structured way.
   - Opt out with `nosnippet` or `data-nosnippet` on specific text. Lowering `max-snippet` reduces the chance but doesn't guarantee it.
 - **Byline dates**:
-  - Show a visible, labeled date ("Diterbitkan", "Diperbarui").
+  - Show a visible, labeled date ("Published", "Updated").
   - Use `datePublished` / `dateModified` in Article, BlogPosting, or VideoObject. ISO 8601 with time and the correct timezone.
   - Visible and structured dates must match. No future dates, and no event dates as publish dates.
   - If Google picks the wrong date, remove other confusing dates from the page.
@@ -162,7 +162,7 @@ Common issues Google rewrites:
 - Traffic is volatile, so treat it as supplemental. Use the Discover performance report (16 months, impression threshold).
 
 ## 10. Page experience & Core Web Vitals
-- **LCP ≤ 2.5s, INP < 200ms, CLS < 0.1** (75th percentile of field data). Measure with the Search Console CWV report, PageSpeed Insights, CrUX, and Lighthouse.
+- **LCP ≤ 2.5s, INP ≤ 200ms, CLS ≤ 0.1** (75th percentile of field data). Measure with the Search Console CWV report, PageSpeed Insights, CrUX, and Lighthouse.
 - CWV is used by ranking systems. Still, **don't chase perfect scores**: relevance wins, and a good experience helps mostly as a tiebreaker among similarly helpful pages.
 - Other aspects that help user satisfaction (not direct rank boosts):
   - HTTPS
