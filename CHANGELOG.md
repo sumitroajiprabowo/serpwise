@@ -4,7 +4,27 @@ All notable changes to this project are documented here. The format follows [Kee
 
 Each release also records `docs-snapshot`, the date the reference material was last checked against Google Search Central.
 
-## [1.1.0] - 2026-11-24
+## [1.1.1] - 2026-11-24
+
+docs-snapshot: 2026-11-22
+
+### Added
+
+- `scripts/audit_page.py` checks `robots.txt` for HTTP 429 and the 500 KiB limit, flags `<meta http-equiv="refresh">` redirects by delay (Low for instant, Medium for delayed; plain reloads ignored), flags `FAQPage` and `HowTo` JSON-LD as no longer producing Google rich results (Low), validates `BreadcrumbList` item count and required `ListItem` fields, and checks required properties for `VideoObject`, `Recipe`, and `SoftwareApplication`.
+- `Done when` sections in all command playbooks, and an explicit Output step in `commands/local.md`.
+- `skills/serpwise/scripts/analyze_gsc.py` listed in the README repository layout.
+
+### Fixed
+
+- `scripts/audit_page.py` combines all `<meta name="robots">` and `<meta name="googlebot">` tags instead of reading only the first.
+- `scripts/audit_page.py` no longer crashes on `<link rel="canonical">` without an `href` attribute, and flags empty canonical `href` values.
+- `scripts/audit_page.py` scopes `X-Robots-Tag` checks to Googlebot/unscoped rules, matches `robots.txt` user-agent tokens exactly, checks `max-image-preview:large` case-insensitively across meta tags and `X-Robots-Tag`, ignores `<title>` inside `<body>` (such as inline SVG), counts image `alt` text inside `<a>` links as anchor text, flags zero-link pages for missing internal links, and rates `hreflang="uk"` High on English pages (Low otherwise).
+- `scripts/analyze_gsc.py` omits meaningless totals for non-additive metrics (`ctr`, `position`), labels additive totals as "Total of exported rows" with a `rows_note` about Search Console's 1,000-row export cap, and formats floats cleanly.
+- `install.sh --copy` excludes `evals/`, `__pycache__/`, and `.DS_Store`.
+- Replaced remaining Indonesian words and locale examples in `references/appearance.md`, `references/international.md`, and `tests/test_audit_page.py`.
+- Updated `references/appearance.md` Core Web Vitals thresholds to `≤ 200ms` (INP) and `≤ 0.1` (CLS), and updated the deprecated structured data list in `references/structured-data.md` (2025–2026 removals and FAQ retirement).
+
+## [1.1.0] - 2026-11-23
 
 docs-snapshot: 2026-11-22
 

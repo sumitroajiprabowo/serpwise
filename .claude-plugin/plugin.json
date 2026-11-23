@@ -1,6 +1,6 @@
 {
   "name": "serpwise",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "SEO for AI coding agents, based on Google's own documentation. Audit pages, fix indexing problems, write structured data, plan migrations and diagnose traffic drops.",
   "author": {
     "name": "Sumitro Aji Prabowo",
