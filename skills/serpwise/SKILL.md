@@ -4,7 +4,7 @@ description: Google Search SEO playbook based on the official Google Search Cent
 license: MIT
 compatibility: Optional bundled auditor needs Python 3.8+ and network access to fetch the URL being audited. Works with any Agent Skills client (Claude Code, Codex, Copilot, Antigravity, etc.).
 metadata:
-  version: "1.1.0"
+  version: "1.1.1"
   source: "https://developers.google.com/search/docs"
   docs-snapshot: "2026-11-22"
 ---
@@ -95,7 +95,7 @@ Rate every finding with one of four severity levels so the user fixes what matte
   - a 4xx/5xx status;
   - a `noindex` added by mistake;
   - robots.txt disallowing important paths or the CSS/JS they need;
-  - a canonical pointing elsewhere;
+  - a canonical pointing elsewhere by mistake;
   - a soft 404;
   - a security issue or manual action;
   - content that only appears after user interaction;
