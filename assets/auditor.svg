@@ -12,7 +12,7 @@
 <text x="24" y="132.4" fill="#ff7b72" font-size="14" text-anchor="start" font-weight="bold" style="opacity:0;animation:k4 12.0s linear infinite">[CRITICAL] (html) &lt;img&gt; inside &lt;head&gt; ends the head: 6 meta/link tags ignored</text>
 <text x="24" y="156.4" fill="#ffa657" font-size="14" text-anchor="start" style="opacity:0;animation:k5 12.0s linear infinite">[HIGH] (appearance) Title too vague: &#x27;Home&#x27;</text>
 <text x="24" y="180.39999999999998" fill="#ffa657" font-size="14" text-anchor="start" style="opacity:0;animation:k6 12.0s linear infinite">[HIGH] (mobile) No viewport meta</text>
-<text x="24" y="204.39999999999998" fill="#ffa657" font-size="14" text-anchor="start" style="opacity:0;animation:k7 12.0s linear infinite">[HIGH] (international) Suspicious hreflang codes: [&#x27;uk&#x27;]  (GB, not UK)</text>
+<text x="24" y="204.39999999999998" fill="#ffa657" font-size="14" text-anchor="start" style="opacity:0;animation:k7 12.0s linear infinite">[HIGH] (international) hreflang &#x27;uk&#x27; is Ukrainian; for the UK use en-GB</text>
 <text x="24" y="228.39999999999998" fill="#ffa657" font-size="14" text-anchor="start" style="opacity:0;animation:k8 12.0s linear infinite">[HIGH] (links) 1 link(s) navigate via JS without a real href</text>
 <text x="24" y="252.39999999999998" fill="#ffa657" font-size="14" text-anchor="start" style="opacity:0;animation:k9 12.0s linear infinite">[HIGH] (structured-data) 1 JSON-LD block(s) fail to parse</text>
 <text x="24" y="276.4" fill="#e3b341" font-size="14" text-anchor="start" style="opacity:0;animation:k10 12.0s linear infinite">[MEDIUM] (images) 3/3 images missing alt attribute</text>

@@ -202,7 +202,7 @@ def auditor():
         (RED, "bold", "[CRITICAL] (html) <img> inside <head> ends the head: 6 meta/link tags ignored"),
         (ORANGE, "normal", "[HIGH] (appearance) Title too vague: 'Home'"),
         (ORANGE, "normal", "[HIGH] (mobile) No viewport meta"),
-        (ORANGE, "normal", "[HIGH] (international) Suspicious hreflang codes: ['uk']  (GB, not UK)"),
+        (ORANGE, "normal", "[HIGH] (international) hreflang 'uk' is Ukrainian; for the UK use en-GB"),
         (ORANGE, "normal", "[HIGH] (links) 1 link(s) navigate via JS without a real href"),
         (ORANGE, "normal", "[HIGH] (structured-data) 1 JSON-LD block(s) fail to parse"),
         (YELLOW, "normal", "[MEDIUM] (images) 3/3 images missing alt attribute"),
