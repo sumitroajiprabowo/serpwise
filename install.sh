@@ -73,7 +73,13 @@ for t in "${TARGETS[@]}"; do
     mv "$dest" "$backup"
     echo "  moved the existing $dest to $backup"
   fi
-  if [ "$MODE" = "copy" ]; then cp -R "$SRC" "$dest"; else ln -s "$SRC" "$dest"; fi
+  if [ "$MODE" = "copy" ]; then
+    cp -R "$SRC" "$dest"
+    rm -rf "$dest/evals" "$dest/.DS_Store"
+    find "$dest" -type d -name "__pycache__" -exec rm -rf {} +
+  else
+    ln -s "$SRC" "$dest"
+  fi
   echo "✓ $t: $MODE -> $dest"
 done
 
