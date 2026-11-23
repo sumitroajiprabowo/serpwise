@@ -41,3 +41,6 @@
 ## 5. Report
 - A table of changes: `file:line`, the problem, the fix, and the Google rule.
 - Anything that can only be confirmed after deploy, such as URL Inspection or the Page Indexing report.
+
+## Done when
+Every Critical and High issue found in the codebase is fixed at its template or config source, existing tests and lint pass, and any remaining post-deploy checks are listed.

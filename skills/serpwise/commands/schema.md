@@ -29,3 +29,6 @@ For existing markup:
 - Report parse errors and missing required properties as **High**.
 - Report missing recommended properties as **Medium**.
 - Then give the corrected block.
+
+## Done when
+The JSON-LD parses as strict JSON, includes every required property from `references/structured-data.md`, matches visible page content, and includes a property table plus Rich Results Test verification steps.

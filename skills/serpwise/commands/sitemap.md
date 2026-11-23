@@ -19,3 +19,6 @@
    - findings rated by severity;
    - a corrected sitemap or generator config.
    Tell the user to verify in the Search Console **Sitemaps report** (status and discovered URLs).
+
+## Done when
+The XML is well-formed, stays within Google's limits, lists only canonical indexable 200 URLs, and has a discovery path (`robots.txt` `Sitemap:` line and/or Search Console submission).

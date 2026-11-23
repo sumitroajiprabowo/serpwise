@@ -20,3 +20,6 @@
 - Give fixed character targets as Google rules.
 - Add meta keywords.
 - Repeat the same description across pages, except the home page and aggregation pages.
+
+## Done when
+The user has 2–3 ready-to-paste title and meta description options (or a dynamic template for large sites) grounded in the page's actual content, with no invented character limits.

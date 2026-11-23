@@ -30,3 +30,6 @@
    - the URL-map template;
    - the redirect rules;
    - the common mistakes to avoid: leftover `noindex` or robots blocks, redirects to 404s, stale sitemaps, an under-provisioned server.
+
+## Done when
+The user has a phased checklist matching the move type, a URL-map template, tested single-hop 301/308 redirect rules (when config lives in the repo), and post-launch Search Console monitoring steps.

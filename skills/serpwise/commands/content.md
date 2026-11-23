@@ -38,3 +38,6 @@ Google says AI Overviews and AI Mode need no special optimization: they draw on 
 ## Don't
 - Set word-count or keyword-density targets.
 - Call E-E-A-T a direct ranking factor. It describes what Google's systems reward; it isn't a score.
+
+## Done when
+Strengths, prioritized content gaps with concrete edits, and any spam or AI-content risks are reported against `references/fundamentals.md` §4 without inventing length or density targets.

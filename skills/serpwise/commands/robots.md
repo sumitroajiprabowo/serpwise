@@ -23,3 +23,6 @@
    - the corrected file;
    - a table of URL → allowed or blocked → matching rule.
    Tell the user to verify in the Search Console **robots.txt report**.
+
+## Done when
+Every important URL and rendering resource (CSS/JS) has been tested against Googlebot's group and precedence rules, any Critical/High blocks are fixed, and the Search Console verification step is listed.

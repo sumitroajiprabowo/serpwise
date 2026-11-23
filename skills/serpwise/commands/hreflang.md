@@ -24,3 +24,6 @@
 - Auto-redirect by IP or `Accept-Language`.
 - Rely on the `lang` attribute or geo meta tags.
 - Translate only the boilerplate.
+
+## Done when
+Every locale variant uses valid ISO codes and absolute canonical URLs, lists itself and all reciprocal alternates (plus `x-default` where appropriate), and passes the auditor's hreflang checks.

@@ -27,3 +27,6 @@
    - the next checks;
    - the fixes.
    Don't promise recovery. After a core update, recommend a content self-assessment (`content`), not quick tweaks.
+
+## Done when
+Every step of the diagnostic tree has been checked or listed as needing user data, affected URLs have been audited when available, and likely causes are ranked with concrete next steps.
