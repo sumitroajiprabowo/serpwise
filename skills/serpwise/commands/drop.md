@@ -3,7 +3,7 @@
 **Input:** what dropped (clicks and/or impressions), since when, how much, and where (pages, queries, countries, devices, search type). Also any recent changes: deploys, migrations, CMS or plugin updates, redesigns. Rules: `references/monitoring-debugging.md` §3–4.
 
 ## Steps
-1. **If key data is missing, ask once, specifically.** Ask for a Performance report comparison (last 3 months vs the previous period, plus a 16-month view) and the Pages and Queries tables sorted by click difference.
+1. **If key data is missing, ask once, specifically.** Ask for a Performance report comparison (last 3 months vs the previous period, plus a 16-month view) and the Pages and Queries tables sorted by click difference. If the user has the exported CSVs, rank them with `python3 <skill-dir>/scripts/analyze_gsc.py Queries.csv --metric clicks` (also `impressions`, `ctr`, `position`, and `Pages.csv`).
 2. **Classify the shape:**
    - sudden and site-wide;
    - gradual;
