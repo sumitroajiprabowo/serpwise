@@ -30,6 +30,11 @@
    - an improved outline if useful.
    Rewrite the whole piece only if asked.
 
+## Content and AI search features
+Google says AI Overviews and AI Mode need no special optimization: they draw on the same index, so the review above already covers them (`references/appearance.md` §13). When the user asks about "AEO" or "GEO":
+- Point to what Google says helps: non-commodity content with first-hand experience, clear organization for people, and supporting images or video.
+- Correct the myths instead of applying them: no llms.txt, no "chunking" into small pieces, no rewriting for AI or chasing every query variant, and no one page per query (that is scaled content abuse, `references/spam-policies.md`).
+
 ## Don't
 - Set word-count or keyword-density targets.
 - Call E-E-A-T a direct ranking factor. It describes what Google's systems reward; it isn't a score.
