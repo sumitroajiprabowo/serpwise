@@ -5,6 +5,8 @@ Stdlib only. Usage:
     python3 audit_page.py https://example.com/page [--json] [--timeout 20]
     python3 audit_page.py ./index.html [--base-url https://example.com/] [--json]
     python3 audit_page.py https://example.com/ --fail-on high    # exit 1 for CI
+    python3 audit_page.py --sitemap https://example.com/sitemap.xml [--limit 10]
+    python3 audit_page.py - < urls.txt                           # read URLs from stdin
 
 A local file is audited as if served with HTTP 200 at --base-url. robots.txt
 is fetched from the live host only when --base-url is given; add --offline to
@@ -15,13 +17,14 @@ with Search Console URL Inspection or the Rich Results Test.
 """
 
 import argparse
-import gzip
 import json
+import os
 import re
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+import xml.etree.ElementTree as ET
 import zlib
 from html.parser import HTMLParser
 
@@ -57,6 +60,16 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None
 
 
+# Read and inflate at most this much: a sitemap may be 50 MB uncompressed, and anything over
+# Googlebot's 2 MB HTML limit is already a finding. The cap stops huge or gzip-bomb responses.
+MAX_BYTES = 52 * 1024 * 1024
+
+
+def inflate(raw, wbits):
+    """Decompress gzip or deflate data, stopping at MAX_BYTES of output."""
+    return zlib.decompressobj(wbits).decompress(raw, MAX_BYTES)
+
+
 def fetch(url, timeout, follow=True, max_hops=10):
     """Return dict(status, headers, body, final_url, chain, error)."""
     opener = urllib.request.build_opener(NoRedirect)
@@ -73,9 +86,9 @@ def fetch(url, timeout, follow=True, max_hops=10):
         )
         try:
             resp = opener.open(req, timeout=timeout)
-            status, headers, raw = resp.status, resp.headers, resp.read()
+            status, headers, raw = resp.status, resp.headers, resp.read(MAX_BYTES)
         except urllib.error.HTTPError as e:
-            status, headers, raw = e.code, e.headers, e.read() if e.fp else b""
+            status, headers, raw = e.code, e.headers, e.read(MAX_BYTES) if e.fp else b""
         except Exception as e:  # network / DNS / TLS
             return {
                 "status": None,
@@ -95,9 +108,9 @@ def fetch(url, timeout, follow=True, max_hops=10):
         enc = (headers.get("Content-Encoding") or "").lower()
         try:
             if enc == "gzip":
-                raw = gzip.decompress(raw)
+                raw = inflate(raw, 16 + zlib.MAX_WBITS)
             elif enc == "deflate":
-                raw = zlib.decompress(raw)
+                raw = inflate(raw, zlib.MAX_WBITS)
         except Exception:
             pass
         return {
@@ -122,6 +135,7 @@ class PageParser(HTMLParser):
     """Collect the parts of a page that the audit checks, in one pass over the HTML."""
 
     def __init__(self):
+        """Start with empty collections for every field the audit reads."""
         super().__init__(convert_charrefs=True)
         # Where <head> ends, and what ended it.
         self.in_head = False
@@ -246,6 +260,200 @@ def jsonld_types(obj, out):
             jsonld_types(v, out)
 
 
+# Required properties per Google's structured data docs. A missing required property makes the
+# item ineligible for its rich result, so it is High, the same as markup that fails to parse.
+REQUIRED_PROPS = {
+    "event": ("name", "startDate", "location"),
+    "jobposting": ("title", "description", "datePosted", "hiringOrganization"),
+    "breadcrumblist": ("itemListElement",),
+}
+# Recommended properties for Article rich results (Article has no required properties).
+ARTICLE_RECOMMENDED = ("headline", "image", "author", "datePublished", "dateModified")
+LOCAL_BUSINESS_TYPES = ("localbusiness", "restaurant", "store", "dentist", "lodgingbusiness")
+
+
+def check_jsonld_properties(obj, issues_out, parent_key=None):
+    """Recursively check Google rich-result types for required and recommended properties.
+
+    Appends (severity, area, issue, fix) tuples to `issues_out`. A Product that is only the
+    `itemReviewed` of a Review isn't a product snippet, so it isn't held to Product's rules.
+    """
+    if isinstance(obj, list):
+        for item in obj:
+            check_jsonld_properties(item, issues_out, parent_key)
+        return
+    if not isinstance(obj, dict):
+        return
+    raw_type = obj.get("@type")
+    types = raw_type if isinstance(raw_type, list) else [raw_type]
+    keys = {k.lower() for k in obj}
+
+    def missing(prop):
+        """True when the property is absent or empty."""
+        return not any(obj.get(k) for k in obj if k.lower() == prop.lower())
+
+    for t in types:
+        if not isinstance(t, str):
+            continue
+        tl = t.lower()
+        if tl == "product" and parent_key != "itemReviewed":
+            if missing("name"):
+                issues_out.append(
+                    ("high", "structured-data", "Product missing required 'name'", "Add 'name'.")
+                )
+            if not keys & {"offers", "review", "aggregaterating"}:
+                issues_out.append(
+                    (
+                        "high",
+                        "structured-data",
+                        "Product needs one of 'offers', 'review' or 'aggregateRating'",
+                        "Add 'offers' (required for merchant listings), or a real 'review'/'aggregateRating'.",
+                    )
+                )
+        elif tl in LOCAL_BUSINESS_TYPES or tl.endswith("business"):
+            for req in ("name", "address"):
+                if missing(req):
+                    issues_out.append(
+                        (
+                            "high",
+                            "structured-data",
+                            f"{t} missing required '{req}'",
+                            "Add it; 'address' is a PostalAddress with as many fields as apply.",
+                        )
+                    )
+        elif tl in REQUIRED_PROPS:
+            for req in REQUIRED_PROPS[tl]:
+                if missing(req):
+                    issues_out.append(
+                        ("high", "structured-data", f"{t} missing required '{req}'", f"Add '{req}'.")
+                    )
+            # A job needs a location unless it is fully remote.
+            if tl == "jobposting" and missing("jobLocation") and obj.get("jobLocationType") != "TELECOMMUTE":
+                issues_out.append(
+                    (
+                        "high",
+                        "structured-data",
+                        "JobPosting missing 'jobLocation'",
+                        "Add 'jobLocation', or jobLocationType TELECOMMUTE plus applicantLocationRequirements.",
+                    )
+                )
+        elif tl in ("article", "newsarticle", "blogposting"):
+            absent = [p for p in ARTICLE_RECOMMENDED if missing(p)]
+            if absent:
+                issues_out.append(
+                    (
+                        "medium",
+                        "structured-data",
+                        f"{t} missing recommended {', '.join(absent)}",
+                        "Add them so Google can show the right title, image and dates.",
+                    )
+                )
+    for k, v in obj.items():
+        check_jsonld_properties(v, issues_out, k)
+
+
+def parse_sitemap(xml_bytes):
+    """Parse sitemap XML (gzip allowed) into (page_urls, child_sitemap_urls).
+
+    Only <url><loc> counts as a page and only <sitemap><loc> as a child sitemap, so image
+    and video extension tags (which also use a <loc> element) are ignored.
+    """
+    if xml_bytes[:2] == b"\x1f\x8b":
+        try:
+            xml_bytes = inflate(xml_bytes, 16 + zlib.MAX_WBITS)
+        except zlib.error:
+            return [], []
+    # Sitemaps never need a DTD, and refusing one rules out entity-expansion attacks.
+    if b"<!DOCTYPE" in xml_bytes[:4096].upper():
+        return [], []
+    try:
+        root = ET.fromstring(xml_bytes)
+    except ET.ParseError:
+        return [], []
+
+    def local(tag):
+        """Strip the XML namespace from a tag name."""
+        return tag.rsplit("}", 1)[-1]
+
+    pages, children = [], []
+    for entry in root:
+        kind = local(entry.tag)
+        for child in entry:
+            if local(child.tag) == "loc" and child.text and child.text.strip():
+                (pages if kind == "url" else children if kind == "sitemap" else []).append(child.text.strip())
+    return pages, children
+
+
+def sitemap_urls(url, timeout, limit):
+    """Fetch a sitemap or sitemap index and return up to `limit` page URLs, or (None, error)."""
+    queue, seen, pages = [url], set(), []
+    while queue and len(pages) < limit and len(seen) < 50:
+        current = queue.pop(0)
+        if current in seen:
+            continue
+        seen.add(current)
+        r = fetch(current, timeout)
+        if r["error"] or not r["body"]:
+            if current == url:
+                return None, r["error"] or "empty response"
+            continue
+        found, children = parse_sitemap(r["body"])
+        pages.extend(found)
+        queue.extend(children)
+    return pages[:limit], None
+
+
+# Core Web Vitals thresholds (good, poor) at the 75th percentile, per Google.
+CWV_THRESHOLDS = {
+    "LCP": ("LARGEST_CONTENTFUL_PAINT_MS", 2500, 4000, "ms"),
+    "INP": ("INTERACTION_TO_NEXT_PAINT", 200, 500, "ms"),
+    "CLS": ("CUMULATIVE_LAYOUT_SHIFT_SCORE", 0.1, 0.25, ""),
+}
+
+
+def pagespeed_check(url, timeout=60, api_key=None):
+    """Fetch Core Web Vitals for `url` from the PageSpeed Insights API (mobile).
+
+    Returns field data from the Chrome UX Report (75th percentile, what Google Search uses)
+    when the URL or its origin has enough traffic, plus lab LCP and CLS as context.
+    """
+    query = {"url": url, "strategy": "mobile", "category": "performance"}
+    if api_key:
+        query["key"] = api_key
+    api = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?" + urllib.parse.urlencode(query)
+    out = {"field": {}, "field_scope": None, "lab": {}, "error": None}
+    try:
+        req = urllib.request.Request(api, headers={"User-Agent": UA, "Accept": "application/json"})
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8", "replace"))
+    except urllib.error.HTTPError as e:
+        out["error"] = f"HTTP {e.code}" + (" (quota exceeded; pass --pagespeed-key)" if e.code == 429 else "")
+        return out
+    except Exception as e:
+        out["error"] = str(e)[:120]
+        return out
+    for scope_key, scope in (("loadingExperience", "url"), ("originLoadingExperience", "origin")):
+        metrics = (data.get(scope_key) or {}).get("metrics") or {}
+        if scope_key == "loadingExperience" and (data.get(scope_key) or {}).get("origin_fallback"):
+            continue
+        for name, (api_name, _good, _poor, _unit) in CWV_THRESHOLDS.items():
+            p75 = (metrics.get(api_name) or {}).get("percentile")
+            if p75 is not None:
+                # The API reports CLS multiplied by 100.
+                out["field"][name] = p75 / 100 if name == "CLS" else p75
+        if out["field"]:
+            out["field_scope"] = scope
+            break
+    audits = (data.get("lighthouseResult") or {}).get("audits") or {}
+    lcp = (audits.get("largest-contentful-paint") or {}).get("numericValue")
+    cls = (audits.get("cumulative-layout-shift") or {}).get("numericValue")
+    if lcp is not None:
+        out["lab"]["LCP"] = round(lcp)
+    if cls is not None:
+        out["lab"]["CLS"] = round(cls, 3)
+    return out
+
+
 def robots_check(page_url, timeout):
     """Fetch the host's robots.txt and decide whether Googlebot may crawl page_url.
 
@@ -326,7 +534,7 @@ def robots_check(page_url, timeout):
     return info
 
 
-def audit(url, timeout=20, local_html=None, offline=False):
+def audit(url, timeout=20, local_html=None, offline=False, pagespeed=False, pagespeed_key=None):
     """Audit one page and return a dict of page data plus a sorted `findings` list.
 
     With `local_html`, the bytes are audited as if served at `url` with HTTP 200.
@@ -715,11 +923,13 @@ def audit(url, timeout=20, local_html=None, offline=False):
             "Add alt text on linked images or aria-label.",
         )
 
-    # JSON-LD: every block must parse, and the page should have some.
-    types, errors = [], []
+    # JSON-LD: every block must parse, check property completeness, and the page should have some.
+    types, errors, schema_issues = [], [], []
     for block in pp.jsonld:
         try:
-            jsonld_types(json.loads(block), types)
+            parsed = json.loads(block)
+            jsonld_types(parsed, types)
+            check_jsonld_properties(parsed, schema_issues)
         except Exception as e:
             errors.append(str(e)[:80])
     data["jsonld_types"] = sorted(set(types))
@@ -730,6 +940,8 @@ def audit(url, timeout=20, local_html=None, offline=False):
             f"{len(errors)} JSON-LD block(s) fail to parse: {errors[:2]}",
             "Fix the JSON (no comments, trailing commas).",
         )
+    for sev, area, msg, fix in schema_issues:
+        add(sev, area, msg, fix)
     if not types and not errors:
         add(
             "medium",
@@ -815,6 +1027,32 @@ def audit(url, timeout=20, local_html=None, offline=False):
             "Check rendered HTML in URL Inspection; consider SSR.",
         )
 
+    # Core Web Vitals from real-user data. Lab numbers are only context: Search uses field data.
+    if pagespeed and final.startswith("http") and not offline:
+        ps = pagespeed_check(final, max(timeout, 60), pagespeed_key)
+        data["pagespeed"] = ps
+        if ps["error"]:
+            add("low", "performance", f"PageSpeed Insights check failed: {ps['error']}")
+        elif not ps["field"]:
+            add(
+                "low",
+                "performance",
+                f"No Chrome UX Report field data for this URL or origin (lab only: {ps['lab']})",
+                "Not enough real-user traffic yet. Lab numbers aren't what Search uses; check again later.",
+            )
+        else:
+            for name, value in ps["field"].items():
+                _api, good, poor, unit = CWV_THRESHOLDS[name]
+                if value <= good:
+                    continue
+                severity, label = ("high", "Poor") if value > poor else ("medium", "Needs improvement")
+                add(
+                    severity,
+                    "performance",
+                    f"{label} {name}: {value}{unit} at p75 ({ps['field_scope']} field data; good is <= {good}{unit})",
+                    "See the Core Web Vitals report in Search Console for the affected URL groups.",
+                )
+
     findings.sort(key=lambda f: SEVERITIES.index(f["severity"]))
     data["findings"] = findings
     return data
@@ -851,6 +1089,11 @@ def print_report(d):
             f"- robots.txt: HTTP {rb['status']}, googlebot_blocked={rb['googlebot_blocked']}, "
             f"rule={rb['matched_rule']}, sitemaps={rb['sitemaps']}"
         )
+    ps = d.get("pagespeed")
+    if ps and not ps.get("error"):
+        print(
+            f"- core web vitals (p75, {ps.get('field_scope') or 'no'} field data): {ps['field']}; lab: {ps['lab']}"
+        )
     print("\n## Findings")
     if not d["findings"]:
         print("No mechanical issues found. Now review content quality and intent manually.")
@@ -860,10 +1103,73 @@ def print_report(d):
     print("\nNote: raw HTML only; JS-rendered content is not executed.")
 
 
+def print_markdown(d):
+    """Print the audit result formatted as markdown."""
+    print(f"# SEO Audit: {d['url']}\n")
+    print(f"- **Final URL:** {d.get('final_url')} | **HTTP:** {d.get('status')}")
+    if d.get("redirect_chain"):
+        print(f"- **Redirects:** {' -> '.join(d['redirect_chain'])}")
+    for k in (
+        "title",
+        "meta_description",
+        "canonical",
+        "robots_meta",
+        "x_robots_tag",
+        "viewport",
+        "html_lang",
+        "h1",
+        "hreflang",
+        "jsonld_types",
+        "og_image",
+        "images",
+        "links",
+        "html_bytes",
+        "visible_text_chars",
+    ):
+        if k in d:
+            print(f"- **{k}:** {d[k]}")
+    rb = d.get("robots_txt")
+    if rb:
+        print(
+            f"- **robots.txt:** HTTP {rb['status']}, blocked={rb['googlebot_blocked']}, "
+            f"rule={rb['matched_rule']}, sitemaps={rb['sitemaps']}"
+        )
+    ps = d.get("pagespeed")
+    if ps and not ps.get("error"):
+        print(
+            f"- **Core Web Vitals (p75, {ps.get('field_scope') or 'no'} field data):** {ps['field']}; lab: {ps['lab']}"
+        )
+    print("\n## Findings\n")
+    if not d["findings"]:
+        print("No mechanical issues found. Review content quality and intent manually.\n")
+    else:
+        print("| Severity | Area | Issue | Fix |")
+        print("|---|---|---|---|")
+        for f in d["findings"]:
+            sev = f["severity"].upper()
+            fix = f["fix"].replace("|", "\\|") if f["fix"] else "-"
+            issue = f["issue"].replace("|", "\\|")
+            print(f"| **{sev}** | {f['area']} | {issue} | {fix} |")
+    print("\n> *Note: raw HTML only; JS-rendered content is not executed.*")
+
+
 def main():
     """Parse the command line, run the audit and set the exit status."""
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("url")
+    ap.add_argument("url", nargs="?", default=None, help="URL or local file to audit (use '-' for stdin)")
+    ap.add_argument("--sitemap", help="URL of a sitemap XML to audit URLs from")
+    ap.add_argument(
+        "--limit", type=int, default=20, help="maximum URLs to audit in batch/sitemap mode (default: 20)"
+    )
+    ap.add_argument("--markdown", action="store_true", help="output report in markdown format")
+    ap.add_argument(
+        "--pagespeed", action="store_true", help="check Core Web Vitals field data via PageSpeed Insights"
+    )
+    ap.add_argument(
+        "--pagespeed-key",
+        default=os.environ.get("PAGESPEED_API_KEY"),
+        help="PageSpeed Insights API key (default: $PAGESPEED_API_KEY); the keyless quota runs out quickly",
+    )
     ap.add_argument("--json", action="store_true", help="machine-readable output")
     ap.add_argument("--timeout", type=int, default=20)
     ap.add_argument("--base-url", help="URL the local HTML file is served at")
@@ -877,19 +1183,83 @@ def main():
         help="exit with status 1 if any finding is at this severity or worse (for CI)",
     )
     a = ap.parse_args()
-    import os
+    if a.limit < 1:
+        ap.error("--limit must be 1 or more")
+
+    # Batch mode: via --sitemap or stdin ('-')
+    urls_to_audit = []
+    if a.sitemap:
+        urls_to_audit, err = sitemap_urls(a.sitemap, a.timeout, a.limit)
+        if err:
+            sys.stderr.write(f"Failed to fetch sitemap: {err}\n")
+            sys.exit(1)
+        if not urls_to_audit:
+            sys.stderr.write("No URLs found in sitemap.\n")
+            sys.exit(1)
+    elif a.url == "-":
+        lines = [ln.strip() for ln in sys.stdin if ln.strip() and not ln.strip().startswith("#")]
+        urls_to_audit = lines[: a.limit]
+        if not urls_to_audit:
+            sys.stderr.write("No URLs provided on stdin.\n")
+            sys.exit(1)
+
+    if urls_to_audit:
+        results = []
+        any_failed = False
+        for u in urls_to_audit:
+            if os.path.isfile(u):
+                # A local file in the list is audited like single-file mode without --base-url.
+                with open(u, "rb") as fh:
+                    body = fh.read()
+                d = audit("file://" + os.path.abspath(u), a.timeout, local_html=body, offline=a.offline)
+                d["source_file"] = u
+            else:
+                target = u if re.match(r"https?://", u) else "https://" + u
+                d = audit(
+                    target, a.timeout, offline=a.offline, pagespeed=a.pagespeed, pagespeed_key=a.pagespeed_key
+                )
+            results.append(d)
+            if failed(d["findings"], a.fail_on):
+                any_failed = True
+        if a.json:
+            print(json.dumps(results, indent=2, ensure_ascii=False, default=str))
+        elif a.markdown:
+            for i, d in enumerate(results):
+                if i > 0:
+                    print("\n---\n")
+                print_markdown(d)
+        else:
+            for i, d in enumerate(results):
+                if i > 0:
+                    print("\n" + "=" * 60 + "\n")
+                print_report(d)
+        sys.exit(1 if any_failed else 0)
+
+    # Single URL or local file mode
+    if not a.url:
+        ap.error("Must provide a URL, local file, '-' for stdin, or --sitemap")
 
     if os.path.isfile(a.url):
         with open(a.url, "rb") as fh:
             body = fh.read()
         base = a.base_url or ("file://" + os.path.abspath(a.url))
-        d = audit(base, a.timeout, local_html=body, offline=a.offline)
+        d = audit(
+            base,
+            a.timeout,
+            local_html=body,
+            offline=a.offline,
+            pagespeed=a.pagespeed,
+            pagespeed_key=a.pagespeed_key,
+        )
         d["source_file"] = a.url
     else:
         url = a.url if re.match(r"https?://", a.url) else "https://" + a.url
-        d = audit(url, a.timeout)
+        d = audit(url, a.timeout, offline=a.offline, pagespeed=a.pagespeed, pagespeed_key=a.pagespeed_key)
+
     if a.json:
         print(json.dumps(d, indent=2, ensure_ascii=False, default=str))
+    elif a.markdown:
+        print_markdown(d)
     else:
         print_report(d)
     sys.exit(1 if failed(d["findings"], a.fail_on) else 0)
