@@ -181,7 +181,7 @@ class PageParser(HTMLParser):
             and self.head_closed_by is None
         ):
             self.head_closed_by = tag
-        if tag == "title" and self.title is None:
+        if tag == "title" and self.title is None and not self.head_done:
             self._in_title = True
             self.title = ""
         elif tag == "meta":
@@ -197,8 +197,10 @@ class PageParser(HTMLParser):
             self._h1_buf = ""
         elif tag == "img":
             self.imgs.append(a)
+            if self._in_a is not None and a.get("alt", "").strip():
+                self._in_a["img_alt"] += " " + a["alt"].strip()
         elif tag == "a":
-            self._in_a = {"attrs": a, "text": ""}
+            self._in_a = {"attrs": a, "text": "", "img_alt": ""}
         elif tag == "script" and a.get("type", "").lower() == "application/ld+json":
             self._in_jsonld = True
             self._jsonld_buf = ""
@@ -239,12 +241,48 @@ def _normalize(url):
     return url.split("#")[0].rstrip("/")
 
 
+def meta_contents(metas, name):
+    """Return all non-empty content values for <meta> tags matching `name`."""
+    return [
+        m.get("content")
+        for m in metas
+        if (m.get("name", "").lower() == name or m.get("property", "").lower() == name) and m.get("content")
+    ]
+
+
 def meta_content(metas, name):
     """Return the content of the first <meta> whose name or property is `name`."""
-    for m in metas:
-        if m.get("name", "").lower() == name or m.get("property", "").lower() == name:
-            return m.get("content")
-    return None
+    vals = meta_contents(metas, name)
+    return vals[0] if vals else None
+
+
+X_ROBOTS_DIRECTIVES = {"max-snippet", "max-image-preview", "max-video-preview", "unavailable_after"}
+
+
+def x_robots_for_google(headers):
+    """Return X-Robots-Tag directives that apply to Googlebot (unscoped or googlebot/all)."""
+    if not hasattr(headers, "get_all"):
+        return ""
+    applicable = []
+    for raw_val in headers.get_all("X-Robots-Tag") or []:
+        m = re.match(r"^\s*([a-z0-9_-]+)\s*:\s*(.*)$", raw_val, re.I)
+        if m and m.group(1).lower() not in X_ROBOTS_DIRECTIVES:
+            if m.group(1).lower() in ("googlebot", "all"):
+                applicable.append(m.group(2).strip())
+        else:
+            applicable.append(raw_val.strip())
+    return ", ".join(filter(None, applicable))
+
+
+def parse_meta_refresh(content):
+    """Parse a meta refresh content value into (delay_seconds, target_url) or (None, None)."""
+    m = re.match(r"^\s*(\d+(?:\.\d+)?)\s*(?:;\s*url\s*=\s*(.+))?\s*$", content or "", re.I)
+    if not m or not m.group(2):
+        return None, None
+    target = m.group(2).strip().strip("'\"").strip()
+    if not target:
+        return None, None
+    return float(m.group(1)), target
 
 
 def jsonld_types(obj, out):
@@ -266,10 +304,13 @@ REQUIRED_PROPS = {
     "event": ("name", "startDate", "location"),
     "jobposting": ("title", "description", "datePosted", "hiringOrganization"),
     "breadcrumblist": ("itemListElement",),
+    "videoobject": ("name", "thumbnailUrl", "uploadDate"),
+    "recipe": ("name", "image"),
 }
 # Recommended properties for Article rich results (Article has no required properties).
 ARTICLE_RECOMMENDED = ("headline", "image", "author", "datePublished", "dateModified")
 LOCAL_BUSINESS_TYPES = ("localbusiness", "restaurant", "store", "dentist", "lodgingbusiness")
+SOFTWARE_APP_TYPES = ("softwareapplication", "mobileapplication", "webapplication")
 
 
 def check_jsonld_properties(obj, issues_out, parent_key=None):
@@ -288,9 +329,12 @@ def check_jsonld_properties(obj, issues_out, parent_key=None):
     types = raw_type if isinstance(raw_type, list) else [raw_type]
     keys = {k.lower() for k in obj}
 
-    def missing(prop):
-        """True when the property is absent or empty."""
-        return not any(obj.get(k) for k in obj if k.lower() == prop.lower())
+    def missing(prop, target=obj):
+        """True when the property is absent or empty (treating 0 and False as present)."""
+        for k, v in target.items():
+            if k.lower() == prop.lower() and v is not None and v != "" and v != [] and v != {}:
+                return False
+        return True
 
     for t in types:
         if not isinstance(t, str):
@@ -308,6 +352,21 @@ def check_jsonld_properties(obj, issues_out, parent_key=None):
                         "structured-data",
                         "Product needs one of 'offers', 'review' or 'aggregateRating'",
                         "Add 'offers' (required for merchant listings), or a real 'review'/'aggregateRating'.",
+                    )
+                )
+        elif tl in SOFTWARE_APP_TYPES:
+            for req in ("name", "offers"):
+                if missing(req):
+                    issues_out.append(
+                        ("high", "structured-data", f"{t} missing required '{req}'", f"Add '{req}'.")
+                    )
+            if not keys & {"review", "aggregaterating"}:
+                issues_out.append(
+                    (
+                        "high",
+                        "structured-data",
+                        f"{t} needs 'aggregateRating' or 'review'",
+                        "Add a real 'aggregateRating' or 'review'.",
                     )
                 )
         elif tl in LOCAL_BUSINESS_TYPES or tl.endswith("business"):
@@ -337,6 +396,48 @@ def check_jsonld_properties(obj, issues_out, parent_key=None):
                         "Add 'jobLocation', or jobLocationType TELECOMMUTE plus applicantLocationRequirements.",
                     )
                 )
+            # BreadcrumbList needs at least 2 ListItems, each with position and name.
+            if tl == "breadcrumblist":
+                items = obj.get("itemListElement")
+                if isinstance(items, list):
+                    if len(items) < 2:
+                        issues_out.append(
+                            (
+                                "high",
+                                "structured-data",
+                                "BreadcrumbList needs at least 2 ListItem entries",
+                                "Include at least two breadcrumb items.",
+                            )
+                        )
+                    bad_item = any(
+                        isinstance(it, dict)
+                        and (
+                            missing("position", it)
+                            or (
+                                missing("name", it)
+                                and not (isinstance(it.get("item"), dict) and not missing("name", it["item"]))
+                            )
+                        )
+                        for it in items
+                    )
+                    if bad_item:
+                        issues_out.append(
+                            (
+                                "high",
+                                "structured-data",
+                                "BreadcrumbList ListItem missing required 'position' or 'name'",
+                                "Give each ListItem a 1-based 'position' and 'name'.",
+                            )
+                        )
+        elif tl in ("faqpage", "howto"):
+            issues_out.append(
+                (
+                    "low",
+                    "structured-data",
+                    f"{t} markup no longer produces a Google rich result",
+                    "Keep it only if other consumers need it.",
+                )
+            )
         elif tl in ("article", "newsarticle", "blogposting"):
             absent = [p for p in ARTICLE_RECOMMENDED if missing(p)]
             if absent:
@@ -466,6 +567,7 @@ def robots_check(page_url, timeout):
         "url": robots_url,
         "status": r["status"],
         "error": r["error"],
+        "bytes": len(r["body"]),
         "sitemaps": [],
         "googlebot_blocked": None,
         "matched_rule": None,
@@ -498,16 +600,10 @@ def robots_check(page_url, timeout):
             info["unsupported"].append(field)
 
     def pick(agent):
-        """Return the rules from the group(s) that apply to `agent`, else from `*`."""
-        best, best_len = [], -1
-        for g in groups:
-            for a in g["agents"]:
-                if a != "*" and agent.startswith(a) and len(a) > best_len:
-                    best, best_len = [g], len(a)
-                elif a != "*" and agent.startswith(a) and len(a) == best_len:
-                    best.append(g)
-        if best:
-            return [r for g in best for r in g["rules"]]
+        """Return the rules from the group(s) matching `agent` exactly, else from `*`."""
+        exact = [r for g in groups if agent in g["agents"] for r in g["rules"]]
+        if exact:
+            return exact
         return [r for g in groups if "*" in g["agents"] for r in g["rules"]]
 
     def to_re(path):
@@ -609,8 +705,9 @@ def audit(url, timeout=20, local_html=None, offline=False, pagespeed=False, page
     # Response headers and Googlebot's HTML size limit.
     headers = r["headers"]
     xrt = ", ".join(headers.get_all("X-Robots-Tag") or []) if hasattr(headers, "get_all") else ""
+    xrt_google = x_robots_for_google(headers)
     data["x_robots_tag"] = xrt or None
-    if re.search(r"\b(noindex|none)\b", xrt, re.I):
+    if re.search(r"\b(noindex|none)\b", xrt_google, re.I):
         add(
             "critical",
             "indexing",
@@ -683,10 +780,8 @@ def audit(url, timeout=20, local_html=None, offline=False, pagespeed=False, page
             "Summarize this page with concrete, page-specific facts.",
         )
 
-    # Robots and googlebot meta tags, meta keywords, SafeSearch rating.
-    robots_meta = " ".join(
-        filter(None, [meta_content(pp.metas, "robots"), meta_content(pp.metas, "googlebot")])
-    )
+    # Robots and googlebot meta tags, meta refresh, meta keywords, SafeSearch rating.
+    robots_meta = " ".join(meta_contents(pp.metas, "robots") + meta_contents(pp.metas, "googlebot"))
     data["robots_meta"] = robots_meta or None
     if re.search(r"\b(noindex|none)\b", robots_meta, re.I):
         add(
@@ -704,6 +799,30 @@ def audit(url, timeout=20, local_html=None, offline=False, pagespeed=False, page
         )
     if re.search(r"\bnofollow\b", robots_meta, re.I):
         add("medium", "crawl", "Page-level nofollow: links on this page won't be followed")
+    final = r["final_url"]
+    for m in pp.metas:
+        if m.get("http-equiv", "").lower() != "refresh":
+            continue
+        delay, target = parse_meta_refresh(m.get("content", ""))
+        if target is None:
+            continue
+        resolved = urllib.parse.urljoin(final, target)
+        if final.startswith("http") and _normalize(resolved) == _normalize(final):
+            continue
+        if delay == 0:
+            add(
+                "low",
+                "crawl",
+                "Instant meta refresh redirect (Google treats it as permanent); prefer a server-side 301/308",
+                "Use a server-side 301/308 redirect whenever possible.",
+            )
+        else:
+            add(
+                "medium",
+                "crawl",
+                "Delayed meta refresh redirect (Google treats it as temporary)",
+                "Use a server-side 301/308 redirect if the move is permanent.",
+            )
     if meta_content(pp.metas, "keywords"):
         add(
             "low",
@@ -728,16 +847,25 @@ def audit(url, timeout=20, local_html=None, offline=False, pagespeed=False, page
     elif len(canon) > 1:
         add("high", "indexing", f"{len(canon)} canonical tags", "Keep exactly one.")
     else:
-        c = urllib.parse.urljoin(final, canon[0])
-        if not canon[0].startswith("http"):
-            add("low", "indexing", "Canonical is relative", "Use an absolute URL.")
-        if final.startswith("http") and _normalize(c) != _normalize(final):
+        raw_canon = (canon[0] or "").strip()
+        if not raw_canon:
             add(
                 "high",
                 "indexing",
-                f"Canonical points elsewhere: {c}",
-                "Fine if this page is a duplicate; otherwise make it self-referencing.",
+                "Empty or missing href on rel=canonical",
+                "Set href to a fully-qualified absolute URL.",
             )
+        else:
+            c = urllib.parse.urljoin(final, raw_canon)
+            if not raw_canon.startswith("http"):
+                add("low", "indexing", "Canonical is relative", "Use an absolute URL.")
+            if final.startswith("http") and _normalize(c) != _normalize(final):
+                add(
+                    "high",
+                    "indexing",
+                    f"Canonical points elsewhere: {c}",
+                    "Fine if this page is a duplicate; otherwise make it self-referencing.",
+                )
 
     # Mobile viewport, html lang and headings.
     vp = meta_content(pp.metas, "viewport")
@@ -792,9 +920,7 @@ def audit(url, timeout=20, local_html=None, offline=False, pagespeed=False, page
             if h.lower() != "x-default" and not re.fullmatch(r"[a-z]{2,3}(-[A-Za-z]{4})?(-[A-Za-z]{2})?", h)
         ]
         bad += [
-            h
-            for h in codes
-            if h.lower().endswith("-uk") or h.lower() in ("uk", "eu") or h.lower().endswith("-eu")
+            h for h in codes if h.lower().endswith("-uk") or h.lower() == "eu" or h.lower().endswith("-eu")
         ]
         if bad:
             add(
@@ -803,6 +929,24 @@ def audit(url, timeout=20, local_html=None, offline=False, pagespeed=False, page
                 f"Suspicious hreflang codes: {sorted(set(bad))}",
                 "Language first (ISO 639-1), region ISO 3166-1 alpha-2 (GB not UK; es-419 unsupported).",
             )
+        if "uk" in [c.lower() for c in codes]:
+            is_english = (pp.html_lang or "").lower().split("-")[0] == "en" or any(
+                c.lower() == "en" or c.lower().startswith("en-") for c in codes
+            )
+            if is_english:
+                add(
+                    "high",
+                    "international",
+                    "hreflang 'uk' is Ukrainian; for the UK use en-GB",
+                    "Use 'en-GB' for English in the UK.",
+                )
+            else:
+                add(
+                    "low",
+                    "international",
+                    "hreflang 'uk' is Ukrainian",
+                    "Confirm Ukrainian is intended.",
+                )
         rel = [u for _, u in hreflangs if u and not u.startswith("http")]
         if rel:
             add("high", "international", "Relative hreflang URLs", "Use fully-qualified absolute URLs.")
@@ -868,6 +1012,7 @@ def audit(url, timeout=20, local_html=None, offline=False, pagespeed=False, page
         for a in pp.anchors
         if a["attrs"].get("href")
         and not a["text"].strip()
+        and not a.get("img_alt", "").strip()
         and not a["attrs"].get("aria-label")
         and not a["attrs"].get("title")
     ]
@@ -901,7 +1046,7 @@ def audit(url, timeout=20, local_html=None, offline=False, pagespeed=False, page
             f"{len(placeholder)} <a> elements without href (not crawlable)",
             "Fine if they are not navigation; otherwise add href.",
         )
-    if pp.anchors and not internal:
+    if not internal and st == 200:
         add(
             "high",
             "links",
@@ -960,8 +1105,8 @@ def audit(url, timeout=20, local_html=None, offline=False, pagespeed=False, page
             "No og:image",
             "Set a large (>=1200px wide) representative image for Discover/social.",
         )
-    mip = re.search(r"max-image-preview:(\w+)", robots_meta or "")
-    if not mip or mip.group(1) != "large":
+    mip = re.search(r"max-image-preview:(\w+)", f"{robots_meta or ''} {xrt_google}", re.I)
+    if not mip or mip.group(1).lower() != "large":
         add(
             "low",
             "appearance",
@@ -986,12 +1131,19 @@ def audit(url, timeout=20, local_html=None, offline=False, pagespeed=False, page
         }
     )
     data["robots_txt"] = rb
-    if rb["status"] and rb["status"] >= 500:
+    if rb["status"] and (rb["status"] == 429 or rb["status"] >= 500):
         add(
             "critical",
             "crawl",
             f"robots.txt returns {rb['status']}: Google stops crawling",
             "Serve robots.txt with 200 (or 404).",
+        )
+    if rb["status"] == 200 and rb.get("bytes", 0) > 500 * 1024:
+        add(
+            "high",
+            "crawl",
+            f"robots.txt is {rb['bytes'] // 1024} KiB, over Google's 500 KiB limit",
+            "Trim robots.txt; content past 500 KiB is ignored.",
         )
     if rb["googlebot_blocked"]:
         add(
