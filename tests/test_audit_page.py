@@ -101,6 +101,10 @@ class RobotsTxtTests(unittest.TestCase):
         txt = "User-agent: Bingbot\nDisallow: /\n\nUser-agent: *\nAllow: /"
         self.assertFalse(robots(txt)["googlebot_blocked"])
 
+    def test_arbitrary_prefix_ua_does_not_match_googlebot(self):
+        txt = "User-agent: g\nDisallow: /\n\nUser-agent: *\nAllow: /"
+        self.assertFalse(robots(txt)["googlebot_blocked"])
+
     def test_googlebot_news_group_not_used_for_googlebot(self):
         txt = "User-agent: Googlebot-News\nDisallow: /\n"
         self.assertFalse(robots(txt)["googlebot_blocked"])
@@ -156,10 +160,117 @@ class PageAuditTests(unittest.TestCase):
         self.assertTrue(has(d, "viewport", "high"))
 
     def test_canonical_elsewhere_and_multiple(self):
-        head = GOOD_HEAD.replace("/product/aero-2", "/product/lain")
+        head = GOOD_HEAD.replace("/product/aero-2", "/product/other")
         self.assertTrue(has(run(page(head=head)), "Canonical points elsewhere", "high"))
         head2 = GOOD_HEAD.replace("</head>", '<link rel="canonical" href="https://example.com/b"></head>')
         self.assertTrue(has(run(page(head=head2)), "canonical tags", "high"))
+
+    def test_canonical_missing_or_empty_href(self):
+        head = GOOD_HEAD.replace(
+            '<link rel="canonical" href="https://example.com/product/aero-2">', '<link rel="canonical">'
+        )
+        self.assertTrue(has(run(page(head=head)), "Empty or missing href on rel=canonical", "high"))
+        head2 = GOOD_HEAD.replace('href="https://example.com/product/aero-2"', 'href=""')
+        self.assertTrue(has(run(page(head=head2)), "Empty or missing href on rel=canonical", "high"))
+
+    def test_multiple_robots_meta_tags_combined(self):
+        head = GOOD_HEAD.replace("</head>", '<meta name="robots" content="noindex"></head>')
+        self.assertTrue(has(run(page(head=head)), "noindex", "critical"))
+
+    def test_meta_refresh_reload_instant_and_delayed(self):
+        # Plain reload (no URL) and self-URL refresh are not redirects.
+        head_reload = GOOD_HEAD.replace("</head>", '<meta http-equiv="refresh" content="300"></head>')
+        self.assertFalse(has(run(page(head=head_reload)), "meta refresh"))
+        head_self = GOOD_HEAD.replace(
+            "</head>",
+            '<meta http-equiv="refresh" content="30;url=https://example.com/product/aero-2"></head>',
+        )
+        self.assertFalse(has(run(page(head=head_self)), "meta refresh"))
+        # Instant redirect (delay 0) is Low; delayed redirect (delay > 0) is Medium.
+        head_instant = GOOD_HEAD.replace("</head>", '<meta http-equiv="refresh" content="0;url=/new"></head>')
+        self.assertTrue(has(run(page(head=head_instant)), "Instant meta refresh", "low"))
+        head_delayed = GOOD_HEAD.replace("</head>", '<meta http-equiv="refresh" content="5;url=/new"></head>')
+        self.assertTrue(has(run(page(head=head_delayed)), "Delayed meta refresh", "medium"))
+
+    def test_svg_title_in_body_not_used_as_page_title(self):
+        head = GOOD_HEAD.replace(
+            "<title>Aero 2 Running Shoe: Light and Cushioned | Stride Supply</title>", ""
+        )
+        d = run(page(head=head, body="<svg><title>Icon</title></svg>"))
+        self.assertEqual(d["title"], "")
+        self.assertTrue(has(d, "Missing <title>", "high"))
+
+    def test_image_link_with_alt_not_empty_anchor(self):
+        d = run(page(body='<a href="/sale"><img src="/b.jpg" alt="Summer sale"></a>'))
+        self.assertEqual(d["links"]["empty_text"], 0)
+        self.assertFalse(has(d, "links with no anchor text"))
+
+    def test_zero_links_page_flagged_no_internal_links(self):
+        html = (GOOD_HEAD + "<body><h1>Title</h1><p>" + ("word " * 80) + "</p></body></html>").encode()
+        self.assertTrue(has(run(html), "No internal links", "high"))
+
+    def test_ukrainian_hreflang_severity_depends_on_english_context(self):
+        # On an English page (html lang="en" or en hreflang), "uk" is High.
+        head_en = GOOD_HEAD.replace(
+            "</head>",
+            '<link rel="alternate" hreflang="uk" href="https://example.com/product/aero-2"></head>',
+        )
+        self.assertTrue(has(run(page(head=head_en)), "for the UK use en-GB", "high"))
+        # On a non-English page (e.g. html lang="uk"), "uk" is Low only.
+        head_uk = head_en.replace('lang="en"', 'lang="uk"')
+        d_uk = run(page(head=head_uk))
+        self.assertFalse(has(d_uk, "hreflang 'uk'", "high"))
+        self.assertTrue(has(d_uk, "hreflang 'uk' is Ukrainian", "low"))
+
+    def test_x_robots_tag_bot_scoping_and_case_insensitive_mip(self):
+        hdrs = Message()
+        hdrs["Content-Type"] = "text/html; charset=utf-8"
+        hdrs.add_header("X-Robots-Tag", "bingbot: noindex")
+        hdrs.add_header("X-Robots-Tag", "MAX-IMAGE-PREVIEW:LARGE")
+        resp = {
+            "status": 200,
+            "headers": hdrs,
+            "body": page(
+                head=GOOD_HEAD.replace('<meta name="robots" content="max-image-preview:large">', "")
+            ),
+            "final_url": "https://example.com/product/aero-2",
+            "chain": [],
+            "error": None,
+        }
+        with mock.patch.object(audit_page, "fetch", return_value=resp):
+            d = audit_page.audit("https://example.com/product/aero-2", offline=True)
+        self.assertFalse(has(d, "X-Robots-Tag", "critical"))
+        self.assertFalse(has(d, "max-image-preview:large"))
+
+    def test_robots_txt_429_and_size_limit(self):
+        with mock.patch.object(
+            audit_page,
+            "robots_check",
+            return_value={
+                "status": 429,
+                "bytes": 0,
+                "sitemaps": [],
+                "googlebot_blocked": None,
+                "matched_rule": None,
+                "unsupported": [],
+            },
+        ):
+            d = audit_page.audit("https://example.com/product/aero-2", local_html=page(), offline=False)
+        self.assertTrue(has(d, "robots.txt returns 429", "critical"))
+        with mock.patch.object(
+            audit_page,
+            "robots_check",
+            return_value={
+                "status": 200,
+                "bytes": 501 * 1024,
+                "sitemaps": ["https://example.com/sitemap.xml"],
+                "googlebot_blocked": False,
+                "matched_rule": None,
+                "unsupported": [],
+            },
+        ):
+            d2 = audit_page.audit("https://example.com/product/aero-2", local_html=page(), offline=False)
+        self.assertTrue(has(d2, "500 KiB", "high"))
 
     def test_hreflang_codes(self):
         links = '<link rel="alternate" hreflang="{}" href="https://example.com/{}/">'
@@ -266,9 +377,10 @@ class PageAuditTests(unittest.TestCase):
 
     def test_eval_fixture_catches_planted_bugs(self):
         with open(FIXTURE, "rb") as fh:
-            d = audit_page.audit("https://example.com/", local_html=fh.read(), offline=True)
+            d = audit_page.audit("https://www.stridesupply.com/", local_html=fh.read(), offline=True)
         for needle in ("noindex", "hreflang", "fail to parse", "navigate via JS", "meta keywords"):
             self.assertTrue(has(d, needle), f"fixture: expected finding containing {needle!r}")
+        self.assertTrue(has(d, "hreflang 'uk'", "high"))
 
 
 class FetchTests(unittest.TestCase):
@@ -398,6 +510,35 @@ class SchemaValidationTests(unittest.TestCase):
         issues = []
         audit_page.check_jsonld_properties({"@type": "BreadcrumbList"}, issues)
         self.assertTrue(any("itemListElement" in msg for _, _, msg, _ in issues))
+        issues2 = []
+        audit_page.check_jsonld_properties(
+            {"@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1}]}, issues2
+        )
+        self.assertTrue(any("at least 2" in msg for _, _, msg, _ in issues2))
+        self.assertTrue(any("position" in msg for _, _, msg, _ in issues2))
+
+    def test_video_recipe_and_software_app_required_props(self):
+        issues = []
+        audit_page.check_jsonld_properties({"@type": "VideoObject", "name": "Demo"}, issues)
+        self.assertTrue(any("thumbnailUrl" in msg for _, _, msg, _ in issues))
+        self.assertTrue(any("uploadDate" in msg for _, _, msg, _ in issues))
+        issues2 = []
+        audit_page.check_jsonld_properties({"@type": "Recipe", "name": "Soup"}, issues2)
+        self.assertTrue(any("image" in msg for _, _, msg, _ in issues2))
+        issues3 = []
+        audit_page.check_jsonld_properties(
+            {"@type": "SoftwareApplication", "name": "App", "offers": {"@type": "Offer", "price": 0}},
+            issues3,
+        )
+        self.assertTrue(any("aggregateRating" in msg for _, _, msg, _ in issues3))
+
+    def test_faqpage_and_howto_flagged_low(self):
+        for kind in ("FAQPage", "HowTo"):
+            issues = []
+            audit_page.check_jsonld_properties({"@type": kind}, issues)
+            self.assertEqual(len(issues), 1)
+            self.assertEqual(issues[0][0], "low")
+            self.assertIn("no longer produces a Google rich result", issues[0][2])
 
 
 class PageSpeedTests(unittest.TestCase):
@@ -497,12 +638,19 @@ class GSCTests(unittest.TestCase):
             fh.write(csv_content)
             tmp_path = fh.name
         try:
+            import io
+
             res = analyze_gsc.analyze(tmp_path, metric="clicks")
             self.assertEqual(len(res["top_drops"]), 2)
             self.assertEqual(res["top_drops"][0]["dimension"], "shoes")
             self.assertEqual(res["top_drops"][0]["change"], -400)
             self.assertEqual(res["top_gains"][0]["dimension"], "running")
             self.assertEqual(res["top_gains"][0]["change"], 200)
+            self.assertIn("1,000 rows", res["rows_note"])
+            buf = io.StringIO()
+            with mock.patch("sys.stdout", buf):
+                analyze_gsc.print_report(res)
+            self.assertIn("Total of exported rows:", buf.getvalue())
         finally:
             os.unlink(tmp_path)
 
@@ -522,9 +670,11 @@ class GSCTests(unittest.TestCase):
             ctr = analyze_gsc.analyze(tmp_path, metric="ctr")
             self.assertEqual(ctr["top_drops"][0]["dimension"], "a")
             self.assertEqual(ctr["top_drops"][0]["change"], -2.5)
+            self.assertEqual(ctr["summary"], {})
             pos = analyze_gsc.analyze(tmp_path, metric="position")
             self.assertEqual(pos["top_drops"][0]["dimension"], "a")
             self.assertEqual(pos["top_gains"][0]["dimension"], "b")
+            self.assertEqual(pos["summary"], {})
         finally:
             os.unlink(tmp_path)
 
