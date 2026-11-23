@@ -1,0 +1,54 @@
+# Example GitHub Actions workflow: audit a page with serpwise on every pull request.
+# Copy it to .github/workflows/serpwise.yml in your site's repository and set AUDIT_URL.
+#
+# The runner needs Node.js and Python 3.8+; ubuntu-latest has both.
+
+name: SEO audit
+
+on:
+  pull_request:
+  # To audit a preview deployment instead (Vercel, Netlify and others report one):
+  # deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    name: serpwise audit
+    runs-on: ubuntu-latest
+    # For deployment_status, only run once the preview is live:
+    # if: github.event.deployment_status.state == 'success'
+    env:
+      # Your production or preview URL. For deployment_status use:
+      # AUDIT_URL: ${{ github.event.deployment_status.target_url }}
+      AUDIT_URL: https://example.com/
+    steps:
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # Write the reports first, so they exist even when the check below fails.
+      - name: Write the audit reports
+        run: |
+          npx -y serpwise audit "$AUDIT_URL" --markdown > audit.md || true
+          npx -y serpwise audit "$AUDIT_URL" --json > audit.json || true
+
+      - name: Upload the reports
+        uses: actions/upload-artifact@v7
+        with:
+          name: seo-audit
+          path: |
+            audit.md
+            audit.json
+
+      # Fail the job when the page has a High or Critical finding.
+      - name: Check for High or Critical findings
+        run: npx -y serpwise audit "$AUDIT_URL" --fail-on high
+
+      # Optional: post the report as a pull request comment (needs `pull-requests: write`).
+      # - name: Comment on the pull request
+      #   if: always() && github.event_name == 'pull_request'
+      #   uses: marocchino/sticky-pull-request-comment@v3
+      #   with:
+      #     path: audit.md
