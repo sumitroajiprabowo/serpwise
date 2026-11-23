@@ -93,17 +93,31 @@ def analyze(filepath, metric="clicks", top_n=20):
     top_drops = sorted(results, key=worse)[:top_n]
     top_gains = sorted(results, key=lambda r: -worse(r))[:top_n]
 
-    return {
-        "metric": metric,
-        "total_rows": len(results),
-        "top_drops": top_drops,
-        "top_gains": top_gains,
-        "summary": {
+    additive = metric.lower() in ("clicks", "impressions")
+    summary = (
+        {
             "total_current": sum(r["current"] for r in results),
             "total_previous": sum(r["previous"] for r in results),
             "total_change": sum(r["change"] for r in results),
-        },
+        }
+        if additive
+        else {}
+    )
+    return {
+        "metric": metric,
+        "total_rows": len(results),
+        "rows_note": "Search Console exports at most 1,000 rows, so totals are not site totals",
+        "top_drops": top_drops,
+        "top_gains": top_gains,
+        "summary": summary,
     }
+
+
+def _fmt_num(val, signed=False):
+    """Format an integer or float cleanly without IEEE 754 precision overflow."""
+    if isinstance(val, float):
+        return f"{val:+10.2f}" if signed else f"{val:10.2f}"
+    return f"{val:+10,}" if signed else f"{val:10,}"
 
 
 def print_report(data):
@@ -112,13 +126,16 @@ def print_report(data):
         print("Error: " + data["error"])
         return
     print("# GSC {} Analysis".format(data["metric"].title()))
-    s = data["summary"]
-    pct = round(s["total_change"] / s["total_previous"] * 100, 1) if s["total_previous"] else 0
-    print(
-        "Total: {:,} -> {:,} ({:+,}, {:+.1f}%)".format(
-            s["total_previous"], s["total_current"], s["total_change"], pct
+    s = data.get("summary") or {}
+    if s:
+        pct = round(s["total_change"] / s["total_previous"] * 100, 1) if s["total_previous"] else 0
+        print(
+            "Total of exported rows: {:,} -> {:,} ({:+,}, {:+.1f}%)".format(
+                s["total_previous"], s["total_current"], s["total_change"], pct
+            )
         )
-    )
+    else:
+        print("Rows analyzed: {:,}".format(data["total_rows"]))
     print("\n## Biggest Drops")
     print(
         "{:<60s} {:>10s} {:>10s} {:>10s} {:>8s}".format("Query/Page", "Previous", "Current", "Change", "Pct")
@@ -127,8 +144,12 @@ def print_report(data):
     for r in data["top_drops"]:
         dim = r["dimension"][:58]
         print(
-            "{:<60s} {:>10,} {:>10,} {:>+10,} {:>+7.1f}%".format(
-                dim, r["previous"], r["current"], r["change"], r["change_pct"]
+            "{:<60s} {} {} {} {:>+7.1f}%".format(
+                dim,
+                _fmt_num(r["previous"]),
+                _fmt_num(r["current"]),
+                _fmt_num(r["change"], True),
+                r["change_pct"],
             )
         )
     print("\n## Biggest Gains")
@@ -139,8 +160,12 @@ def print_report(data):
     for r in data["top_gains"]:
         dim = r["dimension"][:58]
         print(
-            "{:<60s} {:>10,} {:>10,} {:>+10,} {:>+7.1f}%".format(
-                dim, r["previous"], r["current"], r["change"], r["change_pct"]
+            "{:<60s} {} {} {} {:>+7.1f}%".format(
+                dim,
+                _fmt_num(r["previous"]),
+                _fmt_num(r["current"]),
+                _fmt_num(r["change"], True),
+                r["change_pct"],
             )
         )
 
