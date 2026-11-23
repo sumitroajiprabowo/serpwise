@@ -3,6 +3,8 @@
 Run: python3 -m unittest discover -s tests -v
 """
 
+import gzip
+import json
 import os
 import sys
 import unittest
@@ -41,7 +43,7 @@ GOOD_HEAD = (
     '<link rel="canonical" href="https://example.com/product/aero-2">'
     '<meta name="robots" content="max-image-preview:large">'
     '<meta property="og:image" content="https://example.com/a.jpg">'
-    '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Aero 2"}</script>'
+    '<script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"Aero 2","offers":{"@type":"Offer","price":"120","priceCurrency":"USD"}}</script>'
     "</head>"
 )
 
@@ -284,6 +286,282 @@ class FetchTests(unittest.TestCase):
         with mock.patch.object(audit_page, "fetch", return_value=d404):
             d = audit_page.audit("https://example.com/x", timeout=1)
         self.assertTrue(has(d, "HTTP 404", "critical"))
+
+
+class SitemapTests(unittest.TestCase):
+    """Sitemap XML parsing."""
+
+    def test_parse_urlset_sitemap(self):
+        xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+            <url><loc>https://example.com/page1</loc></url>
+            <url><loc>https://example.com/page2</loc></url>
+        </urlset>"""
+        pages, children = audit_page.parse_sitemap(xml)
+        self.assertEqual(pages, ["https://example.com/page1", "https://example.com/page2"])
+        self.assertEqual(children, [])
+
+    def test_parse_sitemapindex(self):
+        xml = b"""<?xml version="1.0" encoding="UTF-8"?>
+        <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+            <sitemap><loc>https://example.com/sitemap1.xml</loc></sitemap>
+            <sitemap><loc>https://example.com/sitemap2.xml</loc></sitemap>
+        </sitemapindex>"""
+        pages, children = audit_page.parse_sitemap(xml)
+        self.assertEqual(pages, [])
+        self.assertEqual(children, ["https://example.com/sitemap1.xml", "https://example.com/sitemap2.xml"])
+
+    def test_image_locs_are_not_pages(self):
+        xml = b"""<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+            xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+            <url><loc>https://example.com/p</loc>
+              <image:image><image:loc>https://cdn.example.com/a.jpg</image:loc></image:image></url>
+        </urlset>"""
+        self.assertEqual(audit_page.parse_sitemap(xml), (["https://example.com/p"], []))
+
+    def test_gzipped_sitemap(self):
+        xml = b'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://e.com/</loc></url></urlset>'
+        self.assertEqual(audit_page.parse_sitemap(gzip.compress(xml)), (["https://e.com/"], []))
+
+    def test_sitemap_index_is_followed(self):
+        index = b'<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><sitemap><loc>https://e.com/a.xml</loc></sitemap></sitemapindex>'
+        child = b'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://e.com/1</loc></url><url><loc>https://e.com/2</loc></url></urlset>'
+        bodies = {"https://e.com/sitemap.xml": index, "https://e.com/a.xml": child}
+
+        def fake_fetch(url, timeout):
+            """Serve the two sitemap files from memory."""
+            return {"error": None, "body": bodies[url]}
+
+        with mock.patch.object(audit_page, "fetch", fake_fetch):
+            self.assertEqual(
+                audit_page.sitemap_urls("https://e.com/sitemap.xml", 5, 1), (["https://e.com/1"], None)
+            )
+
+    def test_doctype_is_refused(self):
+        xml = b'<?xml version="1.0"?><!DOCTYPE x [<!ENTITY a "aaaa">]><urlset><url><loc>&a;</loc></url></urlset>'
+        self.assertEqual(audit_page.parse_sitemap(xml), ([], []))
+
+    def test_inflate_is_capped(self):
+        bomb = gzip.compress(b"0" * (audit_page.MAX_BYTES + 1024))
+        self.assertEqual(len(audit_page.inflate(bomb, 16 + 15)), audit_page.MAX_BYTES)
+
+    def test_parse_malformed_xml_returns_empty(self):
+        self.assertEqual(audit_page.parse_sitemap(b"not xml"), ([], []))
+
+
+class SchemaValidationTests(unittest.TestCase):
+    """Validation of Google-required schema.org properties."""
+
+    def test_product_missing_offers_and_reviews(self):
+        issues = []
+        audit_page.check_jsonld_properties({"@type": "Product", "name": "Shoe"}, issues)
+        self.assertTrue(any("offers" in msg for _, _, msg, _ in issues))
+
+    def test_product_complete_has_no_issues(self):
+        issues = []
+        obj = {"@type": "Product", "name": "Shoe", "offers": {"@type": "Offer", "price": "10"}}
+        audit_page.check_jsonld_properties(obj, issues)
+        self.assertEqual(issues, [])
+
+    def test_local_business_missing_address(self):
+        issues = []
+        audit_page.check_jsonld_properties({"@type": "Restaurant", "name": "Cafe"}, issues)
+        self.assertTrue(any("address" in msg for _, _, msg, _ in issues))
+
+    def test_product_as_item_reviewed_is_not_a_product_snippet(self):
+        issues = []
+        review = {"@type": "Review", "itemReviewed": {"@type": "Product", "name": "Shoe"}, "author": "A"}
+        audit_page.check_jsonld_properties(review, issues)
+        self.assertEqual(issues, [])
+
+    def test_job_posting_needs_location_unless_remote(self):
+        job = {
+            "@type": "JobPosting",
+            "title": "Dev",
+            "description": "x",
+            "datePosted": "2026-01-01",
+            "hiringOrganization": {"@type": "Organization", "name": "Co"},
+        }
+        issues = []
+        audit_page.check_jsonld_properties(job, issues)
+        self.assertTrue(any("jobLocation" in msg for _, _, msg, _ in issues))
+        issues = []
+        audit_page.check_jsonld_properties(dict(job, jobLocationType="TELECOMMUTE"), issues)
+        self.assertEqual(issues, [])
+
+    def test_missing_required_is_high(self):
+        issues = []
+        audit_page.check_jsonld_properties({"@type": "Event", "name": "Gig"}, issues)
+        self.assertEqual({sev for sev, *_ in issues}, {"high"})
+
+    def test_breadcrumb_missing_items(self):
+        issues = []
+        audit_page.check_jsonld_properties({"@type": "BreadcrumbList"}, issues)
+        self.assertTrue(any("itemListElement" in msg for _, _, msg, _ in issues))
+
+
+class PageSpeedTests(unittest.TestCase):
+    """Core Web Vitals from the PageSpeed Insights API."""
+
+    def psi(self, payload):
+        """Run pagespeed_check against a canned API response."""
+        resp = mock.MagicMock()
+        resp.read.return_value = json.dumps(payload).encode()
+        resp.__enter__.return_value = resp
+        with mock.patch("urllib.request.urlopen", return_value=resp):
+            return audit_page.pagespeed_check("https://e.com/", 5)
+
+    def test_field_data_is_read_and_cls_is_scaled(self):
+        payload = {
+            "loadingExperience": {
+                "metrics": {
+                    "LARGEST_CONTENTFUL_PAINT_MS": {"percentile": 4300},
+                    "INTERACTION_TO_NEXT_PAINT": {"percentile": 180},
+                    "CUMULATIVE_LAYOUT_SHIFT_SCORE": {"percentile": 15},
+                }
+            },
+            "lighthouseResult": {"audits": {"largest-contentful-paint": {"numericValue": 1200.4}}},
+        }
+        ps = self.psi(payload)
+        self.assertEqual(ps["field"], {"LCP": 4300, "INP": 180, "CLS": 0.15})
+        self.assertEqual(ps["field_scope"], "url")
+        self.assertEqual(ps["lab"], {"LCP": 1200})
+
+    def test_origin_fallback_is_labelled(self):
+        payload = {
+            "loadingExperience": {
+                "origin_fallback": True,
+                "metrics": {"LARGEST_CONTENTFUL_PAINT_MS": {"percentile": 1}},
+            },
+            "originLoadingExperience": {"metrics": {"LARGEST_CONTENTFUL_PAINT_MS": {"percentile": 2000}}},
+        }
+        ps = self.psi(payload)
+        self.assertEqual((ps["field"], ps["field_scope"]), ({"LCP": 2000}, "origin"))
+
+    def test_findings_use_field_data_only(self):
+        field = {
+            "field": {"LCP": 4300, "INP": 180, "CLS": 0.15},
+            "field_scope": "url",
+            "lab": {},
+            "error": None,
+        }
+        with mock.patch.object(audit_page, "pagespeed_check", return_value=field):
+            d = audit_page.audit("https://e.com/", local_html=page(), offline=False, pagespeed=True)
+        perf = [f for f in d["findings"] if f["area"] == "performance"]
+        self.assertEqual(sorted(f["severity"] for f in perf), ["high", "medium"])
+        self.assertTrue(any("Poor LCP" in f["issue"] for f in perf))
+
+    def test_no_field_data_is_low_only(self):
+        lab = {"field": {}, "field_scope": None, "lab": {"LCP": 9000}, "error": None}
+        with mock.patch.object(audit_page, "pagespeed_check", return_value=lab):
+            d = audit_page.audit("https://e.com/", local_html=page(), offline=False, pagespeed=True)
+        perf = [f for f in d["findings"] if f["area"] == "performance"]
+        self.assertEqual([f["severity"] for f in perf], ["low"])
+
+
+class MarkdownOutputTests(unittest.TestCase):
+    """Markdown report generation."""
+
+    def test_print_markdown_contains_table(self):
+        import io
+
+        d = {
+            "url": "https://example.com",
+            "final_url": "https://example.com",
+            "status": 200,
+            "findings": [
+                {"severity": "critical", "area": "indexing", "issue": "noindex tag", "fix": "Remove it"}
+            ],
+        }
+        buf = io.StringIO()
+        with mock.patch("sys.stdout", buf):
+            audit_page.print_markdown(d)
+        out = buf.getvalue()
+        self.assertIn("# SEO Audit: https://example.com", out)
+        self.assertIn("| Severity | Area | Issue | Fix |", out)
+        self.assertIn("**CRITICAL**", out)
+
+
+class GSCTests(unittest.TestCase):
+    """Google Search Console CSV analyzer."""
+
+    def test_analyze_gsc_csv(self):
+        import tempfile
+
+        import analyze_gsc
+
+        csv_content = (
+            "Top queries,Clicks (Last 3 months),Clicks (Previous 3 months)\nshoes,100,500\nrunning,300,100\n"
+        )
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as fh:
+            fh.write(csv_content)
+            tmp_path = fh.name
+        try:
+            res = analyze_gsc.analyze(tmp_path, metric="clicks")
+            self.assertEqual(len(res["top_drops"]), 2)
+            self.assertEqual(res["top_drops"][0]["dimension"], "shoes")
+            self.assertEqual(res["top_drops"][0]["change"], -400)
+            self.assertEqual(res["top_gains"][0]["dimension"], "running")
+            self.assertEqual(res["top_gains"][0]["change"], 200)
+        finally:
+            os.unlink(tmp_path)
+
+    def test_ctr_percent_and_position_direction(self):
+        import tempfile
+
+        import analyze_gsc
+
+        csv_content = (
+            "Top queries,Last 3 months CTR,Previous 3 months CTR,Last 3 months Position,Previous 3 months Position\n"
+            "a,2.5%,5%,9.0,3.0\nb,6%,4%,2.0,4.0\n"
+        )
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", delete=False) as fh:
+            fh.write(csv_content)
+            tmp_path = fh.name
+        try:
+            ctr = analyze_gsc.analyze(tmp_path, metric="ctr")
+            self.assertEqual(ctr["top_drops"][0]["dimension"], "a")
+            self.assertEqual(ctr["top_drops"][0]["change"], -2.5)
+            pos = analyze_gsc.analyze(tmp_path, metric="position")
+            self.assertEqual(pos["top_drops"][0]["dimension"], "a")
+            self.assertEqual(pos["top_gains"][0]["dimension"], "b")
+        finally:
+            os.unlink(tmp_path)
+
+
+class CliTests(unittest.TestCase):
+    """Command-line behaviour of the auditor."""
+
+    script = os.path.join(ROOT, "skills", "serpwise", "scripts", "audit_page.py")
+
+    def cli(self, *args, stdin=""):
+        """Run the auditor as a subprocess and return (exit code, stdout, stderr)."""
+        import subprocess
+
+        p = subprocess.run(
+            [sys.executable, self.script, *args], input=stdin, capture_output=True, text=True, timeout=60
+        )
+        return p.returncode, p.stdout, p.stderr
+
+    def test_limit_must_be_positive(self):
+        code, _out, err = self.cli("--limit", "0", "x.html")
+        self.assertEqual(code, 2)
+        self.assertIn("--limit", err)
+
+    def test_stdin_list_accepts_local_files(self):
+        import tempfile
+
+        with tempfile.NamedTemporaryFile("wb", suffix=".html", delete=False) as fh:
+            fh.write(page())
+            path = fh.name
+        try:
+            code, out, _err = self.cli("-", "--offline", "--json", stdin="# comment\n" + path + "\n")
+            results = json.loads(out)
+            self.assertEqual(len(results), 1)
+            self.assertEqual(results[0]["source_file"], path)
+            self.assertEqual(code, 0)
+        finally:
+            os.unlink(path)
 
 
 if __name__ == "__main__":
