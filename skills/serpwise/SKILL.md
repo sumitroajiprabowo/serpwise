@@ -1,10 +1,10 @@
 ---
 name: serpwise
-description: Google Search SEO playbook based on the official Google Search Central docs, with commands audit, fix, schema, meta, robots, sitemap, hreflang, migrate, drop and content (e.g. "/serpwise audit https://example.com"). Use it whenever the user wants to audit a site or page for SEO, rank better or get indexed on Google, fix robots.txt/sitemap/canonical/noindex/redirect/JavaScript-rendering problems, add or validate schema.org JSON-LD and rich results, write titles and meta descriptions, plan a site migration or hreflang, optimize product pages, review content quality, or debug a Google traffic drop or Search Console error, even without the word "SEO" (e.g. "why isn't my site showing up on Google?") and in any language. Also use it when reviewing website code (Next.js, Nuxt, WordPress, Laravel, HTML) for search-friendliness.
+description: Google Search SEO playbook based on the official Google Search Central docs, with commands audit, fix, schema, meta, robots, sitemap, hreflang, migrate, drop, content and local (e.g. "/serpwise audit https://example.com"). Use it whenever the user wants to audit a site or page for SEO, rank better or get indexed on Google, fix robots.txt/sitemap/canonical/noindex/redirect/JavaScript-rendering problems, add or validate schema.org JSON-LD and rich results, write titles and meta descriptions, plan a site migration or hreflang, optimize product pages, review content quality, set up local SEO, or debug a Google traffic drop or Search Console error, even without the word "SEO" (e.g. "why isn't my site showing up on Google?") and in any language. Also use it when reviewing website code (Next.js, Nuxt, WordPress, Laravel, HTML) for search-friendliness.
 license: MIT
 compatibility: Optional bundled auditor needs Python 3.8+ and network access to fetch the URL being audited. Works with any Agent Skills client (Claude Code, Codex, Copilot, Antigravity, etc.).
 metadata:
-  version: "1.0.1"
+  version: "1.1.0"
   source: "https://developers.google.com/search/docs"
   docs-snapshot: "2026-11-22"
 ---
@@ -36,6 +36,7 @@ Users invoke a command as `/serpwise <command> [target]` (Claude Code, Copilot),
 | `migrate` | Plan a domain, HTTPS, URL, platform or hosting move | `commands/migrate.md` | `references/crawling-indexing.md` |
 | `drop` | Diagnose a Google traffic drop | `commands/drop.md` | `references/monitoring-debugging.md` |
 | `content <page>` | Review helpful content and E-E-A-T | `commands/content.md` | `references/fundamentals.md`, `references/spam-policies.md` |
+| `local <page>` | Set up or audit local business pages and LocalBusiness markup | `commands/local.md` | `references/structured-data.md`, `references/appearance.md`, `references/spam-policies.md` |
 
 Routing:
 - **No command and no clear task:** show this table as a short menu in the user's language and ask what to run. Don't start work on your own.
@@ -68,6 +69,8 @@ Routing:
 ```bash
 python3 <skill-dir>/scripts/audit_page.py https://example.com/page [--json]
 python3 <skill-dir>/scripts/audit_page.py page.html --base-url https://the-live-url/ [--offline]
+python3 <skill-dir>/scripts/audit_page.py --sitemap https://example.com/sitemap.xml --limit 20 [--markdown]
+python3 <skill-dir>/scripts/audit_page.py https://example.com/ --pagespeed   # Core Web Vitals field data
 ```
 
 What it checks:
@@ -75,11 +78,14 @@ What it checks:
 - robots.txt rules for Googlebot and the sitemap lines;
 - title, meta description, robots meta, canonical, viewport, `<h1>`, hreflang;
 - image alt text, `<a href>` crawlability;
-- JSON-LD parse errors and types, og:image;
+- JSON-LD parse errors, types, and missing required properties for Product, LocalBusiness, Event, JobPosting and BreadcrumbList (recommended ones for Article), og:image;
+- with `--pagespeed`, Core Web Vitals from real-user (Chrome UX Report) data via the PageSpeed Insights API. The keyless quota runs out fast, so pass `--pagespeed-key` or set `PAGESPEED_API_KEY`;
 - invalid elements in `<head>`;
 - HTML size against Googlebot's 2 MB limit.
 
-It reads raw HTML only and doesn't run JavaScript. If Python or network access isn't available, get the HTML another way (curl, a browser tool, or pasted source) and check the same items by hand.
+`scripts/analyze_gsc.py` ranks the queries or pages that lost and gained the most in a Search Console Performance export made in Compare mode: `python3 <skill-dir>/scripts/analyze_gsc.py Queries.csv --metric clicks`.
+
+The auditor reads raw HTML only and doesn't run JavaScript. If Python or network access isn't available, get the HTML another way (curl, a browser tool, or pasted source) and check the same items by hand.
 
 ## Severity levels
 
