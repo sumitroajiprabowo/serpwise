@@ -63,6 +63,7 @@ It covers Google Search and nothing else. If you need keyword research, rank tra
 /serpwise migrate                          plan a domain, HTTPS or URL change
 /serpwise drop                             diagnose a drop in Google traffic
 /serpwise content post.md                  review content quality
+/serpwise local store.html                 set up local SEO and LocalBusiness schema
 ```
 
 In Codex, use `$serpwise` instead of `/serpwise`. You can also just describe the problem ("why isn't my site on Google?") and the agent will pick up the skill.
@@ -79,7 +80,7 @@ npx serpwise uninstall
 The installer copies the skill to these places:
 
 - `~/.claude/skills/serpwise` for Claude Code;
-- `~/.agents/skills/serpwise` for Codex, Copilot and similar agents;
+- `~/.agents/skills/serpwise` for Codex, Copilot, Cursor, Windsurf and other agents that read that folder;
 - `~/.gemini/config/skills/serpwise` for Antigravity.
 
 It skips Claude Code or Antigravity if they aren't installed. Use `--agents claude,antigravity` to install for them anyway.
@@ -106,15 +107,22 @@ The skill includes a small page auditor with no dependencies beyond Python 3.8. 
 - hreflang;
 - image alt text;
 - crawlable links;
-- JSON-LD syntax;
+- JSON-LD syntax, and required properties for common rich-result types;
 - invalid elements in `<head>`;
-- Googlebot's 2 MB HTML limit.
+- Googlebot's 2 MB HTML limit;
+- with `--pagespeed`, Core Web Vitals from real-user data (Chrome UX Report) through the PageSpeed Insights API.
+
+It can audit one page, every URL in a sitemap (`--sitemap`, up to `--limit`), or a list of URLs on stdin (`-`), and print text, JSON or Markdown.
 
 ```bash
 npx serpwise audit https://example.com
+npx serpwise audit --sitemap https://example.com/sitemap.xml --limit 10
+npx serpwise audit https://example.com --markdown --pagespeed   # reads PAGESPEED_API_KEY
 npx serpwise audit index.html --base-url https://example.com/ --offline
 npx serpwise audit https://example.com --fail-on high   # exit 1 if anything is High or Critical, for CI
 ```
+
+[`examples/serpwise-ci.yml`](examples/serpwise-ci.yml) is a GitHub Actions workflow that runs the audit on pull requests. The keyless PageSpeed Insights quota is shared and runs out quickly, so get a free API key for `--pagespeed`.
 
 ![npx serpwise audit output: two Critical findings, a noindex tag and an <img> that ends the head early, followed by High, Medium and Low findings](assets/auditor.svg)
 

@@ -12,6 +12,7 @@ The product is a single Agent Skill in `skills/serpwise/`. Everything else is pa
 | `skills/serpwise/commands/` | One playbook per command |
 | `skills/serpwise/references/` | Condensed Google Search Central guidance, read on demand |
 | `skills/serpwise/scripts/audit_page.py` | The page auditor |
+| `skills/serpwise/scripts/analyze_gsc.py` | Ranks the biggest drops and gains in a Search Console CSV export |
 | `skills/serpwise/agents/openai.yaml` | Optional display metadata for Codex |
 | `skills/serpwise/evals/` | End-to-end test cases (not shipped to users) |
 | `bin/serpwise.mjs`, `package.json` | The `npx serpwise` installer |
@@ -43,8 +44,8 @@ The skill has to work in every agent that supports the [Agent Skills specificati
 **Host neutrality**
 - Don't hard-code paths like `~/.claude/` or tools that only one agent has.
 
-**Auditor**
-- `scripts/audit_page.py` must run on Python 3.8 or later with only the standard library.
+**Scripts**
+- `scripts/audit_page.py` and `scripts/analyze_gsc.py` must run on Python 3.8 or later with only the standard library.
 
 **Sources**
 - Every rule in `references/` must come from Google Search Central documentation.
@@ -77,7 +78,7 @@ It also:
 
 Code comments are in English. Every function gets a one-line comment or docstring saying what it does; add more only where the reason isn't obvious from the code.
 
-When you add a check to the auditor, add a test to `tests/test_audit_page.py`. Changes to the installer need a test in `tests/cli.test.mjs`.
+When you add a check to the auditor or change `analyze_gsc.py`, add a test to `tests/test_audit_page.py`. Changes to the installer need a test in `tests/cli.test.mjs`.
 
 The cases in `skills/serpwise/evals/` run real model sessions and cost money, so they aren't part of CI. Run them with:
 
