@@ -2,16 +2,20 @@
 
 [![npm version](https://img.shields.io/npm/v/serpwise)](https://www.npmjs.com/package/serpwise)
 [![npm downloads](https://img.shields.io/npm/dm/serpwise)](https://www.npmjs.com/package/serpwise)
+[![GitHub stars](https://img.shields.io/github/stars/sumitroajiprabowo/serpwise)](https://github.com/sumitroajiprabowo/serpwise/stargazers)
+[![GitHub release](https://img.shields.io/github/v/release/sumitroajiprabowo/serpwise)](https://github.com/sumitroajiprabowo/serpwise/releases)
 [![CI](https://github.com/sumitroajiprabowo/serpwise/actions/workflows/ci.yml/badge.svg)](https://github.com/sumitroajiprabowo/serpwise/actions/workflows/ci.yml)
 [![Release](https://github.com/sumitroajiprabowo/serpwise/actions/workflows/release.yml/badge.svg)](https://github.com/sumitroajiprabowo/serpwise/actions/workflows/release.yml)
-[![GitHub release](https://img.shields.io/github/v/release/sumitroajiprabowo/serpwise)](https://github.com/sumitroajiprabowo/serpwise/releases)
-[![Node.js >= 18](https://img.shields.io/node/v/serpwise)](package.json)
-[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-3776AB)](skills/serpwise/scripts/audit_page.py)
-[![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](package.json)
+<br>
+[![Node.js >= 18](https://img.shields.io/node/v/serpwise)](https://github.com/sumitroajiprabowo/serpwise/blob/main/package.json)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-3776AB)](https://github.com/sumitroajiprabowo/serpwise/blob/main/skills/serpwise/scripts/audit_page.py)
+[![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](https://github.com/sumitroajiprabowo/serpwise/blob/main/package.json)
 [![Agent Skills](https://img.shields.io/badge/Agent_Skills-compatible-8A2BE2)](https://agentskills.io)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/sumitroajiprabowo/serpwise/blob/main/LICENSE)
 
 SEO for AI coding agents, based on Google's own documentation.
+
+[Why it exists](#why-it-exists) · [Commands](#commands) · [Installation](#installation) · [Page auditor](#page-auditor) · [Search Console analyzer](#search-console-drop-analyzer) · [Tested agents](#tested-agents)
 
 serpwise is an [Agent Skill](https://agentskills.io) for Claude Code, Codex, GitHub Copilot, Antigravity and other agents that support the format. It gives your agent the guidance in [Google Search Central](https://developers.google.com/search/docs) and a set of commands for common SEO work. With it, your agent can:
 
@@ -22,10 +26,11 @@ serpwise is an [Agent Skill](https://agentskills.io) for Claude Code, Codex, Git
 - work out why search traffic dropped.
 
 ```bash
-npx serpwise
+npx serpwise                             # install the skill for your coding agents
+npx serpwise audit https://example.com   # try the page auditor right now, no install
 ```
 
-![Before and after: without serpwise the agent finds the blockers but adds folklore such as fixed title lengths and cites almost no sources; with serpwise every finding has a severity and a Google rule](assets/before-after.svg)
+![Before and after: without serpwise the agent finds the blockers but adds folklore such as fixed title lengths and cites almost no sources; with serpwise every finding has a severity and a Google rule](https://raw.githubusercontent.com/sumitroajiprabowo/serpwise/main/assets/before-after.svg)
 
 ## Why it exists
 
@@ -45,7 +50,7 @@ We gave Claude Code the same broken landing page twice, once with serpwise and o
 | Severity | Numbered list | Critical, High, Medium or Low for every finding |
 | Sources | A Google rule mentioned for 1 of 17 items | A Google rule for 18 of 19 findings |
 
-Both reports are in [`examples/`](examples/), unedited.
+Both reports are in [`examples/`](https://github.com/sumitroajiprabowo/serpwise/tree/main/examples), unedited.
 
 ## How it differs from other SEO skills
 
@@ -129,9 +134,9 @@ npx serpwise audit index.html --base-url https://example.com/ --offline
 npx serpwise audit https://example.com --fail-on high   # exit 1 if anything is High or Critical, for CI
 ```
 
-[`examples/serpwise-ci.yml`](examples/serpwise-ci.yml) is a GitHub Actions workflow that runs the audit on pull requests. The keyless PageSpeed Insights quota is shared and runs out quickly, so get a free API key for `--pagespeed`.
+[`examples/serpwise-ci.yml`](https://github.com/sumitroajiprabowo/serpwise/blob/main/examples/serpwise-ci.yml) is a GitHub Actions workflow that runs the audit on pull requests. The keyless PageSpeed Insights quota is shared and runs out quickly, so get a free API key for `--pagespeed`.
 
-![npx serpwise audit output: two Critical findings, a noindex tag and an <img> that ends the head early, followed by High, Medium and Low findings](assets/auditor.svg)
+![npx serpwise audit output: two Critical findings, a noindex tag and an <img> that ends the head early, followed by High, Medium and Low findings](https://raw.githubusercontent.com/sumitroajiprabowo/serpwise/main/assets/auditor.svg)
 
 It reads the HTML as served and doesn't run JavaScript. For single-page apps, check the rendered result with URL Inspection in Search Console.
 
@@ -169,7 +174,7 @@ We gave each agent the same task: audit a landing page with eight planted proble
 
 ## Contributing
 
-Google changes its documentation often, so corrections are the most useful contribution. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to send one, [CHANGELOG.md](CHANGELOG.md) for release notes, and [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
+Google changes its documentation often, so corrections are the most useful contribution. See [CONTRIBUTING.md](https://github.com/sumitroajiprabowo/serpwise/blob/main/CONTRIBUTING.md) for how to send one, [CHANGELOG.md](https://github.com/sumitroajiprabowo/serpwise/blob/main/CHANGELOG.md) for release notes, and [SECURITY.md](https://github.com/sumitroajiprabowo/serpwise/blob/main/SECURITY.md) for reporting vulnerabilities.
 
 ## License
 
