@@ -91,6 +91,7 @@ Other options:
 
 | Method | Command |
 |---|---|
+| GitHub (no npm) | `npx github:sumitroajiprabowo/serpwise` |
 | skills.sh | `npx skills add sumitroajiprabowo/serpwise` |
 | Claude Code plugin | `/plugin marketplace add sumitroajiprabowo/serpwise`, then `/plugin install serpwise@serpwise` |
 | No Node.js | `git clone https://github.com/sumitroajiprabowo/serpwise && ./serpwise/install.sh` |
@@ -100,14 +101,14 @@ Other options:
 
 The skill includes a small page auditor with no dependencies beyond Python 3.8. Your agent runs it during an audit, and you can also run it yourself. It covers the parts of an audit that a script can check reliably:
 
-- status codes and redirects;
-- robots.txt rules as Googlebot reads them;
+- status codes, redirect chains and `<meta http-equiv="refresh">` redirects;
+- robots.txt rules as Googlebot reads them, plus HTTP 429/5xx errors and the 500 KiB limit;
 - `noindex` and canonical tags;
 - titles and meta descriptions;
 - hreflang;
 - image alt text;
 - crawlable links;
-- JSON-LD syntax, and required properties for common rich-result types;
+- JSON-LD syntax, required properties for Product, LocalBusiness, Event, JobPosting, BreadcrumbList, VideoObject, Recipe and SoftwareApplication (plus recommended Article properties), and warnings for retired FAQPage and HowTo rich results;
 - invalid elements in `<head>`;
 - Googlebot's 2 MB HTML limit;
 - with `--pagespeed`, Core Web Vitals from real-user data (Chrome UX Report) through the PageSpeed Insights API.
@@ -127,6 +128,15 @@ npx serpwise audit https://example.com --fail-on high   # exit 1 if anything is 
 ![npx serpwise audit output: two Critical findings, a noindex tag and an <img> that ends the head early, followed by High, Medium and Low findings](assets/auditor.svg)
 
 It reads the HTML as served and doesn't run JavaScript. For single-page apps, check the rendered result with URL Inspection in Search Console.
+
+## Search Console drop analyzer
+
+`skills/serpwise/scripts/analyze_gsc.py` (Python 3.8+, standard library only) ranks the queries or pages that lost and gained the most in a Search Console Performance export made in Compare mode (`Queries.csv` or `Pages.csv`), across `clicks`, `impressions`, `ctr` or `position`:
+
+```bash
+python3 skills/serpwise/scripts/analyze_gsc.py Queries.csv --metric clicks --top 20
+python3 skills/serpwise/scripts/analyze_gsc.py Pages.csv --metric impressions --json
+```
 
 ## Tested agents
 

@@ -4,7 +4,7 @@ description: Google Search SEO playbook based on the official Google Search Cent
 license: MIT
 compatibility: Optional bundled auditor needs Python 3.8+ and network access to fetch the URL being audited. Works with any Agent Skills client (Claude Code, Codex, Copilot, Antigravity, etc.).
 metadata:
-  version: "1.1.1"
+  version: "1.1.2"
   source: "https://developers.google.com/search/docs"
   docs-snapshot: "2026-11-22"
 ---
@@ -74,11 +74,11 @@ python3 <skill-dir>/scripts/audit_page.py https://example.com/ --pagespeed   # C
 ```
 
 What it checks:
-- HTTP status and redirect chain, X-Robots-Tag;
-- robots.txt rules for Googlebot and the sitemap lines;
+- HTTP status, redirect chain, `<meta http-equiv="refresh">` redirects and X-Robots-Tag;
+- robots.txt rules for Googlebot, HTTP 429/5xx errors, the 500 KiB limit and sitemap lines;
 - title, meta description, robots meta, canonical, viewport, `<h1>`, hreflang;
 - image alt text, `<a href>` crawlability;
-- JSON-LD parse errors, types, and missing required properties for Product, LocalBusiness, Event, JobPosting and BreadcrumbList (recommended ones for Article), og:image;
+- JSON-LD parse errors, types, missing required properties for Product, LocalBusiness, Event, JobPosting, BreadcrumbList, VideoObject, Recipe and SoftwareApplication (recommended ones for Article), warnings for retired FAQPage and HowTo rich results, and og:image;
 - with `--pagespeed`, Core Web Vitals from real-user (Chrome UX Report) data via the PageSpeed Insights API. The keyless quota runs out fast, so pass `--pagespeed-key` or set `PAGESPEED_API_KEY`;
 - invalid elements in `<head>`;
 - HTML size against Googlebot's 2 MB limit.

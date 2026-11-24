@@ -6,14 +6,14 @@
   },
   "metadata": {
     "description": "serpwise: SEO for AI coding agents.",
-    "version": "1.1.1"
+    "version": "1.1.2"
   },
   "plugins": [
     {
       "name": "serpwise",
       "source": "./",
       "description": "SEO for AI coding agents, based on Google's own documentation. Audit pages, fix indexing problems, write structured data, plan migrations and diagnose traffic drops.",
-      "version": "1.1.1",
+      "version": "1.1.2",
       "category": "productivity",
       "keywords": ["seo", "google-search", "structured-data", "technical-seo"],
       "author": {

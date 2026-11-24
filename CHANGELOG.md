@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows [Kee
 
 Each release also records `docs-snapshot`, the date the reference material was last checked against Google Search Central.
 
+## [1.1.2] - 2026-11-24
+
+docs-snapshot: 2026-11-22
+
+### Changed
+
+- `README.md`: added the direct GitHub `npx github:sumitroajiprabowo/serpwise` install option, updated the Page auditor checklist (meta refresh redirects, `robots.txt` 429/5xx and 500 KiB limit, `VideoObject`, `Recipe`, `SoftwareApplication`, and retired `FAQPage`/`HowTo` warnings), and added a `Search Console drop analyzer` section for `skills/serpwise/scripts/analyze_gsc.py`.
+- `skills/serpwise/SKILL.md`: synced the bundled auditor checklist with all current `audit_page.py` checks and bumped `metadata.version` to `1.1.2`.
+- `SECURITY.md`: added `skills/serpwise/scripts/analyze_gsc.py` to the security scope.
+
 ## [1.1.1] - 2026-11-24
 
 docs-snapshot: 2026-11-22
