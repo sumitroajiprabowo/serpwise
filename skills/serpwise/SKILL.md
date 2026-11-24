@@ -4,7 +4,7 @@ description: Google Search SEO playbook based on the official Google Search Cent
 license: MIT
 compatibility: Optional bundled auditor needs Python 3.8+ and network access to fetch the URL being audited. Works with any Agent Skills client (Claude Code, Codex, Copilot, Antigravity, etc.).
 metadata:
-  version: "1.1.2"
+  version: "1.1.3"
   source: "https://developers.google.com/search/docs"
   docs-snapshot: "2026-11-22"
 ---

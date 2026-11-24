@@ -64,7 +64,7 @@ npm test                     # installer tests (Node) plus auditor and structure
 npm run lint                 # ruff, Biome and shellcheck
 npm pack --dry-run           # confirm evals/ is not in the package
 uvx --from "git+https://github.com/agentskills/agentskills#subdirectory=skills-ref" skills-ref validate skills/serpwise
-claude plugin validate .
+claude plugin validate .        # or: npx -y @anthropic-ai/claude-code plugin validate .
 bash -n install.sh
 ```
 
@@ -106,6 +106,6 @@ To release:
 2. Run `npm test`, commit and push.
 3. Create a GitHub release with the tag `v<version>`, for example `gh release create v1.2.0 --generate-notes`.
 
-Publishing the release starts `.github/workflows/release.yml`. It checks that the tag matches all four version numbers, runs the tests and publishes to npm. A pre-release goes to the `next` dist-tag.
+Publishing the release starts `.github/workflows/release.yml`. It checks that the tag matches all four version numbers, runs the tests and publishes to npm. A pre-release goes to the `next` dist-tag. Newly published versions take ~2–3 minutes of asynchronous npm processing before appearing on `npm view` or `npx`.
 
-The workflow uses npm trusted publishing (OIDC), so the repository holds no npm token. The trusted publisher is set up once on npmjs.com under the package's Settings: GitHub Actions, `sumitroajiprabowo/serpwise`, workflow `release.yml`, with direct publish allowed.
+The workflow uses npm trusted publishing (OIDC), so the repository holds no npm token. The trusted publisher is set up once on npmjs.com under the package's Settings (`Publisher: GitHub Actions`, `Organization or user: sumitroajiprabowo`, `Repository: serpwise`, `Workflow filename: release.yml`, `Environment name:` empty, `Allowed actions: Allow npm publish`).

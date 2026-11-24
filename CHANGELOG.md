@@ -4,6 +4,16 @@ All notable changes to this project are documented here. The format follows [Kee
 
 Each release also records `docs-snapshot`, the date the reference material was last checked against Google Search Central.
 
+## [1.1.3] - 2026-11-24
+
+docs-snapshot: 2026-11-22
+
+### Changed
+
+- `README.md`: expanded the top badge bar (npm version, npm downloads, CI, Release, GitHub release, Node.js >= 18, Python 3.8+, zero dependencies, Agent Skills, MIT license), listed `.claude-plugin/`, `install.sh`, and `examples/` in Repository layout, and linked `SECURITY.md` under Contributing.
+- `AGENTS.md`: added `npx -y @anthropic-ai/claude-code plugin validate .` to Checks, documented the exact npmjs.com Trusted Publisher fields, and noted npm's ~2–3 minute asynchronous staging window after publish.
+- `CONTRIBUTING.md`: updated Ground rules for both Python scripts (`audit_page.py` and `analyze_gsc.py`) and documented `bash -n install.sh`, `skills-ref validate`, and `plugin validate` checks.
+
 ## [1.1.2] - 2026-11-24
 
 docs-snapshot: 2026-11-22

@@ -11,7 +11,7 @@ Auditor bugs are welcome too. Include the HTML or URL and the output of `npx ser
 1. Every rule must trace back to a page on [Google Search Central](https://developers.google.com/search/docs). Link it in your pull request. Popular SEO advice that Google doesn't support goes in the myths list in `SKILL.md`, not in the references.
 2. Paraphrase. Don't paste Google's text.
 3. Keep the skill host-neutral: no paths or tools that only one agent has.
-4. The auditor stays on the Python standard library and runs on Python 3.8.
+4. The Python scripts (`skills/serpwise/scripts/audit_page.py` and `analyze_gsc.py`) stay on the Python 3.8+ standard library only.
 
 ## Checks
 
@@ -19,9 +19,10 @@ Auditor bugs are welcome too. Include the HTML or URL and the output of `npx ser
 npm test        # Node and Python tests
 npm run lint    # ruff, Biome and shellcheck (needs uv and shellcheck)
 npm run format  # fix formatting
+bash -n install.sh
 ```
 
-[AGENTS.md](AGENTS.md) covers the repository layout, the full list of checks and the release steps. Coding agents read that file as well.
+CI also validates the Agent Skills spec (`skills-ref validate`) and the Claude Code plugin manifest (`plugin validate`). [AGENTS.md](AGENTS.md) covers the repository layout, the full list of checks and the release steps. Coding agents read that file as well.
 
 ## Pull requests
 

@@ -1,9 +1,15 @@
 # serpwise
 
-[![npm](https://img.shields.io/npm/v/serpwise)](https://www.npmjs.com/package/serpwise)
+[![npm version](https://img.shields.io/npm/v/serpwise)](https://www.npmjs.com/package/serpwise)
+[![npm downloads](https://img.shields.io/npm/dm/serpwise)](https://www.npmjs.com/package/serpwise)
 [![CI](https://github.com/sumitroajiprabowo/serpwise/actions/workflows/ci.yml/badge.svg)](https://github.com/sumitroajiprabowo/serpwise/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Release](https://github.com/sumitroajiprabowo/serpwise/actions/workflows/release.yml/badge.svg)](https://github.com/sumitroajiprabowo/serpwise/actions/workflows/release.yml)
+[![GitHub release](https://img.shields.io/github/v/release/sumitroajiprabowo/serpwise)](https://github.com/sumitroajiprabowo/serpwise/releases)
+[![Node.js >= 18](https://img.shields.io/node/v/serpwise)](package.json)
+[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-3776AB)](skills/serpwise/scripts/audit_page.py)
+[![Zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](package.json)
 [![Agent Skills](https://img.shields.io/badge/Agent_Skills-compatible-8A2BE2)](https://agentskills.io)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
 SEO for AI coding agents, based on Google's own documentation.
 
@@ -157,10 +163,13 @@ We gave each agent the same task: audit a landing page with eight planted proble
 - `skills/serpwise/scripts/audit_page.py`: the page auditor.
 - `skills/serpwise/scripts/analyze_gsc.py`: Search Console Compare export analyzer.
 - `bin/serpwise.mjs`: the `npx serpwise` installer.
+- `.claude-plugin/`: Claude Code plugin and marketplace manifests.
+- `install.sh`: shell installer for machines without Node.js.
+- `examples/`: unedited with/without-skill audit reports and sample GitHub Actions workflow.
 
 ## Contributing
 
-Google changes its documentation often, so corrections are the most useful contribution. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to send one, and [CHANGELOG.md](CHANGELOG.md) for release notes.
+Google changes its documentation often, so corrections are the most useful contribution. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to send one, [CHANGELOG.md](CHANGELOG.md) for release notes, and [SECURITY.md](SECURITY.md) for reporting vulnerabilities.
 
 ## License
 
